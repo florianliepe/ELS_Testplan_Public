@@ -1,0 +1,97 @@
+name: Deploy ELS Testplan Dashboard
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest flask-testing
+    
+    - name: Run basic tests
+      run: |
+        python -c "import app; print('App imports successfully')"
+        python -c "from app import app; print('Flask app created successfully')"
+
+  deploy-heroku:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to Heroku
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+        heroku_app_name: ${{secrets.HEROKU_APP_NAME}}
+        heroku_email: ${{secrets.HEROKU_EMAIL}}
+        healthcheck: "https://${{secrets.HEROKU_APP_NAME}}.herokuapp.com/"
+        checkstring: "Test Plan Dashboard"
+        delay: 5
+        rollbackonhealthcheckfailed: true
+
+  deploy-railway:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Railway CLI
+      run: npm install -g @railway/cli
+    
+    - name: Deploy to Railway
+      run: |
+        railway login --token ${{ secrets.RAILWAY_TOKEN }}
+        railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  deploy-render:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to Render
+      run: |
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}' \
+          https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
+
+  notify:
+    needs: [deploy-heroku, deploy-railway, deploy-render]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        echo "Deployment completed!"
+        echo "Heroku: ${{ needs.deploy-heroku.result }}"
+        echo "Railway: ${{ needs.deploy-railway.result }}"
+        echo "Render: ${{ needs.deploy-render.result }}"
