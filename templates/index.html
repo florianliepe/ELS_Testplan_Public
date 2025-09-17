@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Test Plan - Test Plan Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Test Plan Excel File</h4>
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Drag and drop your Excel file here</h5>
+                    <p class="text-muted">or click to browse files</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                    <button class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open me-2"></i>Browse Files
+                    </button>
+                </div>
+                
+                <div class="mt-4" id="uploadProgress" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-center mt-2">Uploading and processing file...</p>
+                </div>
+                
+                <div class="alert alert-info mt-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>Expected Excel Format:</h6>
+                    <p class="mb-2">Your Excel file should contain the following columns:</p>
+                    <ul class="mb-0">
+                        <li><strong>Test</strong> - Test name or identifier</li>
+                        <li><strong>Description</strong> - Test description</li>
+                        <li><strong>Status</strong> - open, in progress, done, or blocked</li>
+                        <li><strong>Progress</strong> - Percentage (0-100) for in-progress tests</li>
+                        <li><strong>Responsible</strong> - Person responsible for the test</li>
+                        <li><strong>Location</strong> - Test location</li>
+                        <li><strong>Blocker</strong> - Information about blocker (for blocked tests)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4" id="sampleData" style="display: none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>File Processed Successfully</h5>
+            </div>
+            <div class="card-body">
+                <p>Your test plan has been uploaded and processed successfully!</p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-chart-bar me-2"></i>View Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sample Excel Template Download -->
+<div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-download me-2"></i>Download Sample Template</h5>
+            </div>
+            <div class="card-body">
+                <p>Don't have a test plan Excel file? Download our sample template to get started:</p>
+                <button class="btn btn-outline-secondary" onclick="downloadSampleTemplate()">
+                    <i class="fas fa-file-excel me-2"></i>Download Sample Excel Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const sampleData = document.getElementById('sampleData');
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    });
+
+    function handleFileUpload(file) {
+        if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+            alert('Please select an Excel file (.xlsx or .xls)');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadProgress.style.display = 'block';
+        uploadArea.style.display = 'none';
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            uploadProgress.style.display = 'none';
+            
+            if (data.success) {
+                sampleData.style.display = 'block';
+            } else {
+                alert('Error: ' + data.error);
+                uploadArea.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            uploadProgress.style.display = 'none';
+            uploadArea.style.display = 'block';
+            alert('Error uploading file: ' + error.message);
+        });
+    }
+
+    function downloadSampleTemplate() {
+        // Create sample data
+        const sampleData = [
+            ['Test', 'Description', 'Status', 'Progress', 'Responsible', 'Location', 'Blocker'],
+            ['Login Functionality', 'Test user login with valid credentials', 'done', 100, 'John Doe', 'Lab A', ''],
+            ['Password Reset', 'Test password reset functionality', 'in progress', 75, 'Jane Smith', 'Lab B', ''],
+            ['User Registration', 'Test new user registration process', 'open', 0, 'Bob Johnson', 'Lab A', ''],
+            ['Database Connection', 'Test database connectivity', 'blocked', 0, 'Alice Brown', 'Server Room', 'Database server is down'],
+            ['API Integration', 'Test third-party API integration', 'in progress', 30, 'Charlie Wilson', 'Lab C', '']
+        ];
+
+        // Convert to CSV format
+        const csvContent = sampleData.map(row => row.join(',')).join('\n');
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'test_plan_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+</script>
+{% endblock %}

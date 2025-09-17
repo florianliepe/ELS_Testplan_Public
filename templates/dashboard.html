@@ -1,0 +1,1204 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Test Plan Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <!-- Summary Cards -->
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalTests">0</h4>
+                        <p class="card-text">Total Tests</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="completedTests">0</h4>
+                        <p class="card-text">Completed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="inProgressTests">0</h4>
+                        <p class="card-text">In Progress</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-spinner fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="blockedTests">0</h4>
+                        <p class="card-text">Blocked</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Test Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Progress Overview</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="progressChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Controls -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+                        <label for="statusFilter" class="form-label">Filter by Status:</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="open">Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="done">Done</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="dueDateFilter" class="form-label">Filter by Due Date:</label>
+                        <select class="form-select" id="dueDateFilter">
+                            <option value="">All Dates</option>
+                            <option value="overdue">Overdue</option>
+                            <option value="due_today">Due Today</option>
+                            <option value="due_this_week">Due This Week</option>
+                            <option value="due_next_week">Due Next Week</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="responsibleFilter" class="form-label">Filter by Responsible:</label>
+                        <select class="form-select" id="responsibleFilter">
+                            <option value="">All People</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="locationFilter" class="form-label">Filter by Location:</label>
+                        <select class="form-select" id="locationFilter">
+                            <option value="">All Locations</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchFilter" class="form-label">Search Tests:</label>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search by test name or description">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Plan Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list me-2"></i>Test Plan Details</h5>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" onclick="showAddTestModal()">
+                        <i class="fas fa-plus me-1"></i>Add Test
+                    </button>
+                    <button class="btn btn-primary btn-sm me-2" onclick="showAddBlockerModal()">
+                        <i class="fas fa-ban me-1"></i>Add Blocker
+                    </button>
+                    <a href="/blockers" class="btn btn-warning btn-sm me-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>View All Blockers
+                    </a>
+                    <button class="btn btn-secondary btn-sm me-2" onclick="importFromSharePoint()">
+                        <i class="fas fa-cloud-download-alt me-1"></i>Import SharePoint
+                    </button>
+                    <button class="btn btn-info btn-sm me-2" onclick="exportToExcel()">
+                        <i class="fas fa-download me-1"></i>Export Excel
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="testTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Test</th>
+                                <th>Description</th>
+                                <th>Start Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Responsible</th>
+                                <th>Location</th>
+                                <th>Blocker</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Test Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editTestId">
+                    <div class="mb-3">
+                        <label for="editStatus" class="form-label">Status</label>
+                        <select class="form-select" id="editStatus">
+                            <option value="open">Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="done">Done</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="progressGroup">
+                        <label for="editProgress" class="form-label">Progress (%)</label>
+                        <input type="range" class="form-range" id="editProgress" min="0" max="100" value="0">
+                        <div class="d-flex justify-content-between">
+                            <span>0%</span>
+                            <span id="progressValue">0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="blockerGroup" style="display: none;">
+                        <label for="editBlocker" class="form-label">Blocker Information</label>
+                        <textarea class="form-control" id="editBlocker" rows="3" placeholder="Describe the blocker..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Test Details Modal -->
+<div class="modal fade" id="editDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Test Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDetailsForm">
+                    <input type="hidden" id="editDetailsTestId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsTest" class="form-label">Test Name</label>
+                                <input type="text" class="form-control" id="editDetailsTest" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsStatus" class="form-label">Status</label>
+                                <select class="form-select" id="editDetailsStatus">
+                                    <option value="open">Open</option>
+                                    <option value="in progress">In Progress</option>
+                                    <option value="done">Done</option>
+                                    <option value="blocked">Blocked</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDetailsDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editDetailsDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsResponsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="editDetailsResponsible">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsLocation" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="editDetailsLocation">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="editDetailsStartDate">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDetailsDueDate" class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="editDetailsDueDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editDetailsProgressGroup">
+                        <label for="editDetailsProgress" class="form-label">Progress (%)</label>
+                        <input type="range" class="form-range" id="editDetailsProgress" min="0" max="100" value="0">
+                        <div class="d-flex justify-content-between">
+                            <span>0%</span>
+                            <span id="editDetailsProgressValue">0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editDetailsBlockerGroup" style="display: none;">
+                        <label for="editDetailsBlocker" class="form-label">Blocker Information</label>
+                        <textarea class="form-control" id="editDetailsBlocker" rows="3" placeholder="Describe the blocker..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTestDetails()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Test Modal -->
+<div class="modal fade" id="addTestModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Test</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTestForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestName" class="form-label">Test Name</label>
+                                <input type="text" class="form-control" id="addTestName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestStatus" class="form-label">Status</label>
+                                <select class="form-select" id="addTestStatus">
+                                    <option value="open">Open</option>
+                                    <option value="in progress">In Progress</option>
+                                    <option value="done">Done</option>
+                                    <option value="blocked">Blocked</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addTestDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="addTestDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestResponsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="addTestResponsible">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestLocation" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="addTestLocation">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="addTestStartDate">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addTestDueDate" class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="addTestDueDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="addTestProgressGroup" style="display: none;">
+                        <label for="addTestProgress" class="form-label">Progress (%)</label>
+                        <input type="range" class="form-range" id="addTestProgress" min="0" max="100" value="0">
+                        <div class="d-flex justify-content-between">
+                            <span>0%</span>
+                            <span id="addTestProgressValue">0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="addTestBlockerGroup" style="display: none;">
+                        <label for="addTestBlocker" class="form-label">Blocker Information</label>
+                        <textarea class="form-control" id="addTestBlocker" rows="3" placeholder="Describe the blocker..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="addNewTest()">Add Test</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Blocker Modal -->
+<div class="modal fade" id="addBlockerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Blocker</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBlockerForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerName" class="form-label">Blocker Name</label>
+                                <input type="text" class="form-control" id="addBlockerName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerPriority" class="form-label">Priority</label>
+                                <select class="form-select" id="addBlockerPriority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addBlockerDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="addBlockerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerResponsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="addBlockerResponsible">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="addBlockerStartDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addBlockerStatus" class="form-label">Resolution Status</label>
+                        <select class="form-select" id="addBlockerStatus">
+                            <option value="open" selected>Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="addNewBlocker()">Add Blocker</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let testData = [];
+    let statusChart, progressChart;
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadData();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        // Filter event listeners
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('dueDateFilter').addEventListener('change', applyFilters);
+        document.getElementById('responsibleFilter').addEventListener('change', applyFilters);
+        document.getElementById('locationFilter').addEventListener('change', applyFilters);
+        document.getElementById('searchFilter').addEventListener('input', applyFilters);
+        
+        // Edit modal event listeners
+        document.getElementById('editStatus').addEventListener('change', function() {
+            const status = this.value;
+            const progressGroup = document.getElementById('progressGroup');
+            const blockerGroup = document.getElementById('blockerGroup');
+            
+            if (status === 'in progress') {
+                progressGroup.style.display = 'block';
+            } else {
+                progressGroup.style.display = 'none';
+            }
+            
+            if (status === 'blocked') {
+                blockerGroup.style.display = 'block';
+            } else {
+                blockerGroup.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('editProgress').addEventListener('input', function() {
+            document.getElementById('progressValue').textContent = this.value + '%';
+        });
+    }
+
+    function loadData() {
+        fetch('/api/data')
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    testData = data;
+                    updateSummaryCards();
+                    updateCharts();
+                    populateFilters();
+                    renderTable();
+                } else {
+                    document.getElementById('testTableBody').innerHTML = 
+                        '<tr><td colspan="8" class="text-center">No data available. Please upload an Excel file first.</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('testTableBody').innerHTML = 
+                    '<tr><td colspan="8" class="text-center text-danger">Error loading data. Please try again.</td></tr>';
+            });
+    }
+
+    function updateSummaryCards() {
+        updateSummaryCardsWithData(testData);
+    }
+
+    function updateSummaryCardsWithData(data) {
+        const total = data.length;
+        const completed = data.filter(test => test.status === 'done').length;
+        const inProgress = data.filter(test => test.status === 'in progress').length;
+        const blocked = data.filter(test => test.status === 'blocked').length;
+
+        document.getElementById('totalTests').textContent = total;
+        document.getElementById('completedTests').textContent = completed;
+        document.getElementById('inProgressTests').textContent = inProgress;
+        document.getElementById('blockedTests').textContent = blocked;
+    }
+
+    function updateCharts() {
+        updateChartsWithData(testData);
+    }
+
+    function updateChartsWithData(data) {
+        // Auto-update overdue status before calculating counts
+        autoUpdateOverdueStatus(data);
+        
+        const statusCounts = {
+            'open': data.filter(test => getEffectiveStatus(test) === 'open').length,
+            'in progress': data.filter(test => getEffectiveStatus(test) === 'in progress').length,
+            'done': data.filter(test => getEffectiveStatus(test) === 'done').length,
+            'blocked': data.filter(test => getEffectiveStatus(test) === 'blocked').length,
+            'overdue': data.filter(test => getEffectiveStatus(test) === 'overdue').length
+        };
+
+        // Status Chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        if (statusChart) statusChart.destroy();
+        
+        statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Open', 'In Progress', 'Done', 'Blocked', 'Overdue'],
+                datasets: [{
+                    data: [statusCounts.open, statusCounts['in progress'], statusCounts.done, statusCounts.blocked, statusCounts.overdue],
+                    backgroundColor: ['#6c757d', '#0d6efd', '#198754', '#dc3545', '#8B0000']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Progress Chart
+        const progressCtx = document.getElementById('progressChart').getContext('2d');
+        if (progressChart) progressChart.destroy();
+        
+        const progressData = data.filter(test => test.status === 'in progress');
+        const progressLabels = progressData.map(test => test.test.substring(0, 20) + '...');
+        const progressValues = progressData.map(test => test.progress);
+
+        progressChart = new Chart(progressCtx, {
+            type: 'bar',
+            data: {
+                labels: progressLabels,
+                datasets: [{
+                    label: 'Progress %',
+                    data: progressValues,
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+    function populateFilters() {
+        const responsibleSet = new Set(testData.map(test => test.responsible).filter(r => r));
+        const locationSet = new Set(testData.map(test => test.location).filter(l => l));
+
+        const responsibleFilter = document.getElementById('responsibleFilter');
+        const locationFilter = document.getElementById('locationFilter');
+
+        // Clear existing options (except "All")
+        responsibleFilter.innerHTML = '<option value="">All People</option>';
+        locationFilter.innerHTML = '<option value="">All Locations</option>';
+
+        // Add unique values
+        responsibleSet.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person;
+            option.textContent = person;
+            responsibleFilter.appendChild(option);
+        });
+
+        locationSet.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location;
+            option.textContent = location;
+            locationFilter.appendChild(option);
+        });
+    }
+
+    // Helper functions for date handling (DD.MM.YYYY format)
+    function parseDate(dateString) {
+        if (!dateString) return null;
+        const parts = dateString.split('.');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+        return null;
+    }
+
+    function formatDateForDisplay(dateString) {
+        if (!dateString) return '';
+        // If already in DD.MM.YYYY format, return as is
+        if (dateString.includes('.')) return dateString;
+        
+        // If in YYYY-MM-DD format, convert to DD.MM.YYYY
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+        return dateString;
+    }
+
+    function formatDateForInput(dateString) {
+        if (!dateString) return '';
+        // Convert DD.MM.YYYY to YYYY-MM-DD for HTML5 date inputs
+        const parts = dateString.split('.');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        return dateString;
+    }
+
+    function isOverdue(test) {
+        if (!test.due_date || test.status === 'done') return false;
+        const today = new Date();
+        const dueDate = parseDate(test.due_date);
+        return dueDate && dueDate < today;
+    }
+
+    function getDueDateStatus(test) {
+        if (!test.due_date) return '';
+        
+        const today = new Date();
+        const dueDate = parseDate(test.due_date);
+        if (!dueDate) return '';
+        
+        const diffTime = dueDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (test.status === 'done') return 'completed';
+        if (diffDays < 0) return 'overdue';
+        if (diffDays === 0) return 'due_today';
+        if (diffDays <= 7) return 'due_this_week';
+        if (diffDays <= 14) return 'due_next_week';
+        return 'future';
+    }
+
+    function formatDueDate(test) {
+        if (!test.due_date) return '-';
+        
+        const dueStatus = getDueDateStatus(test);
+        const dateStr = formatDateForDisplay(test.due_date);
+        
+        switch (dueStatus) {
+            case 'overdue':
+                return `<span class="text-danger fw-bold" title="Overdue"><i class="fas fa-exclamation-triangle me-1"></i>${dateStr}</span>`;
+            case 'due_today':
+                return `<span class="text-warning fw-bold" title="Due Today"><i class="fas fa-clock me-1"></i>${dateStr}</span>`;
+            case 'due_this_week':
+                return `<span class="text-info" title="Due This Week">${dateStr}</span>`;
+            case 'completed':
+                return `<span class="text-success" title="Completed">${dateStr}</span>`;
+            default:
+                return dateStr;
+        }
+    }
+
+    function getEffectiveStatus(test) {
+        if (isOverdue(test)) return 'overdue';
+        return test.status;
+    }
+
+    function renderTable(filteredData = testData) {
+        const tbody = document.getElementById('testTableBody');
+        tbody.innerHTML = '';
+
+        filteredData.forEach(test => {
+            const effectiveStatus = getEffectiveStatus(test);
+            const row = document.createElement('tr');
+            
+            // Add row class for overdue tests
+            if (effectiveStatus === 'overdue') {
+                row.classList.add('table-warning');
+            }
+            
+            row.innerHTML = `
+                <td><strong>${test.test}</strong></td>
+                <td>${test.description}</td>
+                <td>${formatDateForDisplay(test.start_date) || '-'}</td>
+                <td>${formatDueDate(test)}</td>
+                <td><span class="badge bg-${getStatusColor(effectiveStatus)}">${effectiveStatus.toUpperCase().replace('_', ' ')}</span></td>
+                <td>
+                    ${test.status === 'in progress' ? 
+                        `<div class="progress progress-bar-custom">
+                            <div class="progress-bar" role="progressbar" style="width: ${test.progress}%" 
+                                 aria-valuenow="${test.progress}" aria-valuemin="0" aria-valuemax="100">
+                                ${test.progress}%
+                            </div>
+                         </div>` : 
+                        test.status === 'done' ? '100%' : '-'
+                    }
+                </td>
+                <td>${test.responsible}</td>
+                <td>${test.location}</td>
+                <td>${test.status === 'blocked' ? 
+                    `<a href="/blockers?search=${encodeURIComponent(test.blocker)}" class="text-danger text-decoration-none" title="View blocker details">
+                        <i class="fas fa-external-link-alt me-1"></i>${test.blocker}
+                     </a>` : '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editTest(${test.id})" title="Quick Status Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info me-1" onclick="editTestDetails(${test.id})" title="Edit All Details">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTest(${test.id})" title="Delete Test">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function getStatusColor(status) {
+        switch(status) {
+            case 'open': return 'secondary';
+            case 'in progress': return 'primary';
+            case 'done': return 'success';
+            case 'blocked': return 'danger';
+            case 'overdue': return 'dark';
+            default: return 'secondary';
+        }
+    }
+
+    // Auto-update overdue status based on due dates
+    function autoUpdateOverdueStatus(data) {
+        const today = new Date();
+        data.forEach(test => {
+            if (test.due_date && test.status !== 'done') {
+                const dueDate = parseDate(test.due_date);
+                if (dueDate && dueDate < today) {
+                    // Only auto-update if not manually set to overdue already
+                    if (test.status !== 'overdue') {
+                        // Update the test status in the backend
+                        updateTestStatusInBackground(test.id, 'overdue');
+                    }
+                }
+            }
+        });
+    }
+
+    // Update test status in background without user interaction
+    function updateTestStatusInBackground(testId, newStatus) {
+        fetch('/api/update_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: testId,
+                status: newStatus,
+                progress: 0, // Reset progress for overdue items
+                blocker: ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Silently update the local data
+                const test = testData.find(t => t.id === testId);
+                if (test) {
+                    test.status = newStatus;
+                }
+            }
+        })
+        .catch(error => {
+            console.warn('Background status update failed for test', testId, ':', error);
+        });
+    }
+
+    function applyFilters() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const responsibleFilter = document.getElementById('responsibleFilter').value;
+        const locationFilter = document.getElementById('locationFilter').value;
+        const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+
+        let filteredData = testData.filter(test => {
+            const matchesStatus = !statusFilter || test.status === statusFilter;
+            const matchesResponsible = !responsibleFilter || test.responsible === responsibleFilter;
+            const matchesLocation = !locationFilter || test.location === locationFilter;
+            const matchesSearch = !searchFilter || 
+                test.test.toLowerCase().includes(searchFilter) || 
+                test.description.toLowerCase().includes(searchFilter);
+
+            return matchesStatus && matchesResponsible && matchesLocation && matchesSearch;
+        });
+
+        // Update table
+        renderTable(filteredData);
+        
+        // Update summary cards with filtered data
+        updateSummaryCardsWithData(filteredData);
+        
+        // Update charts with filtered data
+        updateChartsWithData(filteredData);
+    }
+
+    function editTest(testId) {
+        const test = testData.find(t => t.id === testId);
+        if (!test) return;
+
+        document.getElementById('editTestId').value = testId;
+        document.getElementById('editStatus').value = test.status;
+        document.getElementById('editProgress').value = test.progress;
+        document.getElementById('progressValue').textContent = test.progress + '%';
+        document.getElementById('editBlocker').value = test.blocker;
+
+        // Show/hide relevant fields
+        const progressGroup = document.getElementById('progressGroup');
+        const blockerGroup = document.getElementById('blockerGroup');
+        
+        progressGroup.style.display = test.status === 'in progress' ? 'block' : 'none';
+        blockerGroup.style.display = test.status === 'blocked' ? 'block' : 'none';
+
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    function saveChanges() {
+        const testId = parseInt(document.getElementById('editTestId').value);
+        const status = document.getElementById('editStatus').value;
+        const progress = parseInt(document.getElementById('editProgress').value);
+        const blocker = document.getElementById('editBlocker').value;
+
+        fetch('/api/update_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: testId,
+                status: status,
+                progress: progress,
+                blocker: blocker
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                loadData(); // Refresh the data
+            } else {
+                alert('Error updating status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error updating status: ' + error.message);
+        });
+    }
+
+    function refreshData() {
+        loadData();
+    }
+
+    // Enhanced functionality functions
+    function editTestDetails(testId) {
+        const test = testData.find(t => t.id === testId);
+        if (!test) return;
+
+        document.getElementById('editDetailsTestId').value = testId;
+        document.getElementById('editDetailsTest').value = test.test;
+        document.getElementById('editDetailsDescription').value = test.description;
+        document.getElementById('editDetailsResponsible').value = test.responsible;
+        document.getElementById('editDetailsLocation').value = test.location;
+        document.getElementById('editDetailsStartDate').value = formatDateForInput(test.start_date) || '';
+        document.getElementById('editDetailsDueDate').value = formatDateForInput(test.due_date) || '';
+        document.getElementById('editDetailsStatus').value = test.status;
+        document.getElementById('editDetailsProgress').value = test.progress;
+        document.getElementById('editDetailsProgressValue').textContent = test.progress + '%';
+        document.getElementById('editDetailsBlocker').value = test.blocker;
+
+        // Show/hide relevant fields
+        const progressGroup = document.getElementById('editDetailsProgressGroup');
+        const blockerGroup = document.getElementById('editDetailsBlockerGroup');
+        
+        progressGroup.style.display = test.status === 'in progress' ? 'block' : 'none';
+        blockerGroup.style.display = test.status === 'blocked' ? 'block' : 'none';
+
+        // Add event listeners for this modal
+        document.getElementById('editDetailsStatus').onchange = function() {
+            const status = this.value;
+            progressGroup.style.display = status === 'in progress' ? 'block' : 'none';
+            blockerGroup.style.display = status === 'blocked' ? 'block' : 'none';
+        };
+
+        document.getElementById('editDetailsProgress').oninput = function() {
+            document.getElementById('editDetailsProgressValue').textContent = this.value + '%';
+        };
+
+        new bootstrap.Modal(document.getElementById('editDetailsModal')).show();
+    }
+
+    function saveTestDetails() {
+        const testId = parseInt(document.getElementById('editDetailsTestId').value);
+        const testData = {
+            id: testId,
+            test: document.getElementById('editDetailsTest').value,
+            description: document.getElementById('editDetailsDescription').value,
+            responsible: document.getElementById('editDetailsResponsible').value,
+            location: document.getElementById('editDetailsLocation').value,
+            start_date: document.getElementById('editDetailsStartDate').value,
+            due_date: document.getElementById('editDetailsDueDate').value,
+            status: document.getElementById('editDetailsStatus').value,
+            progress: parseInt(document.getElementById('editDetailsProgress').value),
+            blocker: document.getElementById('editDetailsBlocker').value
+        };
+
+        fetch('/api/update_test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(testData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editDetailsModal')).hide();
+                loadData(); // Refresh the data
+            } else {
+                alert('Error updating test: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error updating test: ' + error.message);
+        });
+    }
+
+    function showAddTestModal() {
+        // Clear form
+        document.getElementById('addTestForm').reset();
+        document.getElementById('addTestProgressValue').textContent = '0%';
+        
+        // Hide conditional fields initially
+        document.getElementById('addTestProgressGroup').style.display = 'none';
+        document.getElementById('addTestBlockerGroup').style.display = 'none';
+
+        // Add event listeners
+        document.getElementById('addTestStatus').onchange = function() {
+            const status = this.value;
+            const progressGroup = document.getElementById('addTestProgressGroup');
+            const blockerGroup = document.getElementById('addTestBlockerGroup');
+            
+            progressGroup.style.display = status === 'in progress' ? 'block' : 'none';
+            blockerGroup.style.display = status === 'blocked' ? 'block' : 'none';
+        };
+
+        document.getElementById('addTestProgress').oninput = function() {
+            document.getElementById('addTestProgressValue').textContent = this.value + '%';
+        };
+
+        new bootstrap.Modal(document.getElementById('addTestModal')).show();
+    }
+
+    function addNewTest() {
+        const testData = {
+            test: document.getElementById('addTestName').value,
+            description: document.getElementById('addTestDescription').value,
+            responsible: document.getElementById('addTestResponsible').value,
+            location: document.getElementById('addTestLocation').value,
+            start_date: document.getElementById('addTestStartDate').value,
+            due_date: document.getElementById('addTestDueDate').value,
+            status: document.getElementById('addTestStatus').value,
+            progress: parseInt(document.getElementById('addTestProgress').value),
+            blocker: document.getElementById('addTestBlocker').value
+        };
+
+        if (!testData.test.trim()) {
+            alert('Please enter a test name');
+            return;
+        }
+
+        fetch('/api/add_test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(testData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addTestModal')).hide();
+                loadData(); // Refresh the data
+            } else {
+                alert('Error adding test: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error adding test: ' + error.message);
+        });
+    }
+
+    function showAddBlockerModal() {
+        // Clear form and set default date
+        document.getElementById('addBlockerForm').reset();
+        document.getElementById('addBlockerStartDate').value = new Date().toISOString().split('T')[0];
+        
+        new bootstrap.Modal(document.getElementById('addBlockerModal')).show();
+    }
+
+    function addNewBlocker() {
+        const blockerData = {
+            name: document.getElementById('addBlockerName').value,
+            description: document.getElementById('addBlockerDescription').value,
+            responsible: document.getElementById('addBlockerResponsible').value,
+            start_date: document.getElementById('addBlockerStartDate').value,
+            priority: document.getElementById('addBlockerPriority').value,
+            resolution_status: document.getElementById('addBlockerStatus').value
+        };
+
+        if (!blockerData.name.trim()) {
+            alert('Please enter a blocker name');
+            return;
+        }
+
+        fetch('/api/add_blocker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(blockerData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addBlockerModal')).hide();
+                alert('Blocker added successfully! You can view and manage it in the Blockers dashboard.');
+            } else {
+                alert('Error adding blocker: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error adding blocker: ' + error.message);
+        });
+    }
+
+    function deleteTest(testId) {
+        const test = testData.find(t => t.id === testId);
+        if (!test) return;
+
+        if (confirm(`Are you sure you want to delete the test "${test.test}"?`)) {
+            fetch('/api/delete_test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: testId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadData(); // Refresh the data
+                } else {
+                    alert('Error deleting test: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting test: ' + error.message);
+            });
+        }
+    }
+
+    function exportToExcel() {
+        if (!testData || testData.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+
+        fetch('/api/export')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create a temporary link to download the file
+                    const link = document.createElement('a');
+                    link.href = data.download_url;
+                    link.download = data.filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    alert('Error exporting data: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error exporting data: ' + error.message);
+            });
+    }
+
+    function importFromSharePoint() {
+        // Show loading indicator
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Importing...';
+        button.disabled = true;
+
+        fetch('/api/import_sharepoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                loadData(); // Refresh the dashboard
+            } else {
+                alert('SharePoint import failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('SharePoint import error: ' + error.message);
+        })
+        .finally(() => {
+            // Restore button
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    }
+</script>
+{% endblock %}

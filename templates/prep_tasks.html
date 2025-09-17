@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparation Tasks Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-badge {
+            font-size: 0.8em;
+            padding: 0.25rem 0.5rem;
+        }
+        .volume-badge {
+            font-size: 0.7em;
+            padding: 0.2rem 0.4rem;
+        }
+        .progress-bar-container {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-outline-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+        }
+        .stats-card-2 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+        }
+        .stats-card-3 {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            border: none;
+        }
+        .stats-card-4 {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            border: none;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+        .due-date-warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .due-date-upcoming {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+        
+        /* Jira-like Timeline Styles */
+        .timeline-container {
+            height: 500px;
+            display: flex;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
+        
+        /* Task Details Sidebar */
+        .timeline-sidebar {
+            width: 300px;
+            background: #f7f8f9;
+            border-right: 1px solid #dfe1e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .timeline-sidebar-header {
+            padding: 16px;
+            background: #0052cc;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 1px solid #dfe1e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .timeline-task-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e4e6ea;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .timeline-task-item:hover {
+            background: #e4e6ea;
+        }
+        
+        .timeline-task-item.selected {
+            background: #deebff;
+            border-left: 3px solid #0052cc;
+        }
+        
+        .task-item-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #172b4d;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .task-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        
+        .task-item-status {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .task-item-status.not_started {
+            background: #ddd;
+            color: #666;
+        }
+        
+        .task-item-status.in_progress {
+            background: #fff4e6;
+            color: #974f0c;
+        }
+        
+        .task-item-status.completed {
+            background: #e3fcef;
+            color: #006644;
+        }
+        
+        .task-item-status.blocked {
+            background: #ffebe6;
+            color: #bf2600;
+        }
+        
+        .task-item-assignee {
+            font-size: 12px;
+            color: #5e6c84;
+        }
+        
+        .task-item-dates {
+            font-size: 11px;
+            color: #5e6c84;
+            line-height: 1.2;
+        }
+        
+        /* Timeline Chart Area */
+        .timeline-chart {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .timeline-header {
+            background: #f7f8f9;
+            border-bottom: 2px solid #dfe1e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .timeline-months {
+            display: flex;
+            border-bottom: 1px solid #dfe1e6;
+            height: 50px;
+        }
+        
+        .timeline-month {
+            padding: 12px 16px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #172b4d;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-right: 1px solid #dfe1e6;
+            min-width: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .timeline-weeks {
+            display: flex;
+            height: 40px;
+        }
+        
+        .timeline-week {
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #5e6c84;
+            border-right: 1px solid #e4e6ea;
+            min-width: 50px;
+            background: #fafbfc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .timeline-week.today {
+            background: #e3f2fd;
+            color: #0052cc;
+            font-weight: 700;
+        }
+        
+        /* Daily Timeline Headers */
+        .timeline-days {
+            display: flex;
+            border-bottom: 2px solid #dfe1e6;
+            height: 35px;
+        }
+        
+        .timeline-day {
+            padding: 6px 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #5e6c84;
+            border-right: 1px solid #f4f5f7;
+            background: #fafbfc;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 25px;
+        }
+        
+        .timeline-day:hover {
+            background: #e4e6ea;
+        }
+        
+        .timeline-day.today {
+            background: #e3f2fd;
+            color: #0052cc;
+            font-weight: 700;
+            border-left: 2px solid #0052cc;
+            border-right: 2px solid #0052cc;
+        }
+        
+        .timeline-day.weekend {
+            background: #f0f0f0;
+            color: #8993a4;
+        }
+        
+        .timeline-day.weekend.today {
+            background: #e3f2fd;
+            color: #0052cc;
+        }
+        
+        .timeline-day-number {
+            display: block;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .timeline-day-name {
+            display: block;
+            font-size: 9px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+        
+        /* Timeline Body */
+        .timeline-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .timeline-row {
+            height: 48px;
+            border-bottom: 1px solid #f4f5f7;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .timeline-row:nth-child(even) {
+            background: #fafbfc;
+        }
+        
+        .timeline-row:hover {
+            background: #e4e6ea;
+        }
+        
+        /* Duration Bars */
+        .timeline-bar {
+            position: absolute;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        /* Planned vs Current Timeline Bars */
+        .timeline-bar.planned {
+            height: 18px;
+            top: 20%;
+            opacity: 0.7;
+            border: 2px dashed rgba(255,255,255,0.9);
+            background: rgba(108, 117, 125, 0.8) !important;
+        }
+        
+        .timeline-bar.current {
+            height: 28px;
+            top: 65%;
+            z-index: 2;
+        }
+        
+        .timeline-bar.planned-only {
+            height: 32px;
+            top: 50%;
+            opacity: 0.7;
+            border: 2px dashed rgba(255,255,255,0.9);
+        }
+        
+        .timeline-bar:hover {
+            transform: translateY(-50%) translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+        
+        .timeline-bar.not_started {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+        }
+        
+        .timeline-bar.in_progress {
+            background: linear-gradient(135deg, #0052cc, #0747a6);
+        }
+        
+        .timeline-bar.completed {
+            background: linear-gradient(135deg, #00875a, #006644);
+        }
+        
+        .timeline-bar.blocked {
+            background: linear-gradient(135deg, #de350b, #bf2600);
+        }
+        
+        .timeline-bar.overdue {
+            border: 2px solid #de350b;
+            animation: pulse-jira 2s infinite;
+        }
+        
+        @keyframes pulse-jira {
+            0% { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0 rgba(222, 53, 11, 0.7); }
+            70% { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 6px rgba(222, 53, 11, 0); }
+            100% { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0 rgba(222, 53, 11, 0); }
+        }
+        
+        /* Progress visualization within bars */
+        .timeline-bar-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .timeline-bar-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .timeline-bar-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px;
+        }
+        
+        .timeline-bar-progress-text {
+            font-size: 10px;
+            margin-left: 4px;
+            opacity: 0.9;
+        }
+        
+        /* Dependencies */
+        .timeline-dependency {
+            position: absolute;
+            pointer-events: none;
+            z-index: 3;
+        }
+        
+        .timeline-dependency-line {
+            stroke: #0052cc;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        /* Today line */
+        .timeline-today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #de350b;
+            z-index: 4;
+            pointer-events: none;
+            box-shadow: 0 0 4px rgba(222, 53, 11, 0.5);
+        }
+        
+        /* Empty state */
+        .timeline-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #5e6c84;
+            font-style: italic;
+            font-size: 14px;
+        }
+        
+        /* Responsive behavior */
+        @media (max-width: 768px) {
+            .timeline-container {
+                height: 400px;
+            }
+            
+            .timeline-sidebar {
+                width: 250px;
+            }
+            
+            .timeline-month {
+                min-width: 80px;
+                font-size: 11px;
+            }
+            
+            .timeline-week {
+                min-width: 20px;
+                font-size: 10px;
+            }
+            
+            .timeline-row {
+                height: 40px;
+            }
+            
+            .timeline-bar {
+                height: 20px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="fas fa-tasks me-2"></i>Preparation Tasks Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard"><i class="fas fa-chart-line me-1"></i>Test Plan</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/prep-tasks"><i class="fas fa-tasks me-1"></i>Prep Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blockers"><i class="fas fa-exclamation-triangle me-1"></i>Blockers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin"><i class="fas fa-users-cog me-1"></i>Admin</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tasks fa-2x mb-2"></i>
+                        <h4 id="totalTasks">0</h4>
+                        <p class="mb-0">Total Tasks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card-2">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h4 id="completedTasks">0</h4>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card-3">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h4 id="inProgressTasks">0</h4>
+                        <p class="mb-0">In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card-4">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <h4 id="blockedTasks">0</h4>
+                        <p class="mb-0">Blocked</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Distribution Chart -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Task Status Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Timeline Overview</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-light" id="prevTimelineRange">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-light" id="resetTimelineRange">Reset View</button>
+                            <button type="button" class="btn btn-outline-light" id="nextTimelineRange">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <!-- Enhanced Timeline Controls -->
+                        <div class="row mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label small">Group by:</label>
+                                <select class="form-select form-select-sm" id="timelineGroupBy">
+                                    <option value="none">No Grouping</option>
+                                    <option value="responsible">Responsible Person</option>
+                                    <option value="status">Status</option>
+                                    <option value="volume">Volume</option>
+                                    <option value="location">Location</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">View:</label>
+                                <select class="form-select form-select-sm" id="timelineView">
+                                    <option value="month">Month View</option>
+                                    <option value="week">Week View</option>
+                                    <option value="quarter">Quarter View</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Status:</label>
+                                <select class="form-select form-select-sm" id="timelineStatusFilter">
+                                    <option value="">All Statuses</option>
+                                    <option value="not_started">Not Started</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="blocked">Blocked</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Date Range:</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="date" class="form-control" id="timelineStartDate" placeholder="Start">
+                                    <input type="date" class="form-control" id="timelineEndDate" placeholder="End">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Search:</label>
+                                <input type="text" class="form-control form-control-sm" id="timelineSearch" placeholder="Search timeline tasks...">
+                            </div>
+                        </div>
+                        
+                        <!-- Timeline Container -->
+                        <div class="timeline-container" id="timelineContainer">
+                            <!-- Task Details Sidebar -->
+                            <div class="timeline-sidebar">
+                                <div class="timeline-sidebar-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-tasks me-2"></i>Tasks</span>
+                                        <small class="text-light opacity-75" id="timelineTaskCount">0 tasks</small>
+                                    </div>
+                                </div>
+                                <div id="timelineSidebarContent">
+                                    <!-- Task items will be generated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline Chart Area -->
+                            <div class="timeline-chart">
+                                <!-- Timeline Header with months, weeks, and days -->
+                                <div class="timeline-header">
+                                    <div class="timeline-months" id="timelineMonths">
+                                        <!-- Month headers will be generated here -->
+                                    </div>
+                                    <div class="timeline-weeks" id="timelineWeeks">
+                                        <!-- Week headers will be generated here -->
+                                    </div>
+                                    <div class="timeline-days" id="timelineDays">
+                                        <!-- Daily headers will be generated here -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Timeline Body with duration bars -->
+                                <div class="timeline-body" id="timelineBody">
+                                    <!-- Timeline rows and bars will be generated here -->
+                                    <svg class="timeline-dependency" id="timelineDependencies" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                                        <defs>
+                                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                                <polygon points="0 0, 10 3.5, 0 7" fill="#0052cc" />
+                                            </marker>
+                                        </defs>
+                                    </svg>
+                                    <!-- Today line will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter State Indicator -->
+        <div class="row mb-3" id="filterIndicatorRow" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-filter me-2"></i>
+                        <strong>Active Filters:</strong> <span id="filterIndicatorText"></span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="clearAllFilters()">
+                        <i class="fas fa-times me-1"></i>Clear All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Import Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="file" class="form-control" id="fileInput" accept=".xlsx,.xls">
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-primary me-2" onclick="uploadFile()">
+                                    <i class="fas fa-upload me-1"></i>Upload Excel
+                                </button>
+                                <button class="btn btn-success me-2" onclick="importFromSharePoint()">
+                                    <i class="fas fa-cloud-download-alt me-1"></i>Import SharePoint
+                                </button>
+                                <button class="btn btn-info" onclick="exportToExcel()">
+                                    <i class="fas fa-download me-1"></i>Export Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+                        <small class="text-muted">Showing <span id="filteredCount">0</span> of <span id="totalCount">0</span> tasks</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label small">Filter by Status:</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">All Statuses</option>
+                                    <option value="not_started">Not Started</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="blocked">Blocked</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Filter by Responsible:</label>
+                                <select class="form-select" id="responsibleFilter">
+                                    <option value="">All Responsible</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Filter by Location:</label>
+                                <select class="form-select" id="locationFilter">
+                                    <option value="">All Locations</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Filter by Volume:</label>
+                                <select class="form-select" id="volumeFilter">
+                                    <option value="">All Volumes</option>
+                                    <option value="xs">XS</option>
+                                    <option value="s">S</option>
+                                    <option value="m">M</option>
+                                    <option value="l">L</option>
+                                    <option value="xl">XL</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Button -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <button class="btn btn-success" onclick="showAddTaskModal()">
+                    <i class="fas fa-plus me-1"></i>Add New Task
+                </button>
+            </div>
+        </div>
+
+        <!-- Tasks Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Preparation Tasks</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Activity Title</th>
+                                <th>Description</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Responsible</th>
+                                <th>Volume</th>
+                                <th>Blocker</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTableBody">
+                            <!-- Tasks will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Task Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalTitle">Add New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskForm">
+                        <input type="hidden" id="taskId">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="activityTitle" class="form-label">Activity Title *</label>
+                                    <input type="text" class="form-control" id="activityTitle" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="startDate" class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="startDate">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="dueDate" class="form-label">Due Date</label>
+                                    <input type="date" class="form-control" id="dueDate">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status">
+                                        <option value="not_started">Not Started</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="blocked">Blocked</option>
+                                        <option value="overdue">Overdue</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="progress" class="form-label">Progress (%)</label>
+                                    <input type="number" class="form-control" id="progress" min="0" max="100" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="volume" class="form-label">Volume</label>
+                                    <select class="form-select" id="volume">
+                                        <option value="xs">XS</option>
+                                        <option value="s">S</option>
+                                        <option value="m" selected>M</option>
+                                        <option value="l">L</option>
+                                        <option value="xl">XL</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="responsible" class="form-label">Responsible</label>
+                                    <input type="text" class="form-control" id="responsible">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="blocker" class="form-label">Blocker</label>
+                                    <input type="text" class="form-control" id="blocker" placeholder="Only if status is blocked">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTask()">Save Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Update Modal -->
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Task Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="statusTaskId">
+                    <div class="mb-3">
+                        <label for="newStatus" class="form-label">Status</label>
+                        <select class="form-select" id="newStatus">
+                            <option value="not_started">Not Started</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newProgress" class="form-label">Progress (%)</label>
+                        <input type="number" class="form-control" id="newProgress" min="0" max="100">
+                    </div>
+                    <div class="mb-3" id="blockerInputDiv" style="display: none;">
+                        <label for="newBlocker" class="form-label">Blocker Information</label>
+                        <input type="text" class="form-control" id="newBlocker" placeholder="Describe the blocker">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateTaskStatus()">Update Status</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let prepTasks = [];
+        let filteredTasks = [];
+        let statusChart, volumeChart;
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPrepTasks();
+            initializeTimelineControls();
+            setupFilterEventListeners();
+        });
+
+        // Setup filter event listeners (using exact dashboard.html pattern)
+        function setupFilterEventListeners() {
+            console.log('Setting up filter event listeners...');
+            
+            // Check if elements exist before adding listeners
+            const statusFilter = document.getElementById('statusFilter');
+            const responsibleFilter = document.getElementById('responsibleFilter');
+            const locationFilter = document.getElementById('locationFilter');
+            const volumeFilter = document.getElementById('volumeFilter');
+            
+            console.log('Filter elements check:', {
+                statusFilter: !!statusFilter,
+                responsibleFilter: !!responsibleFilter,
+                locationFilter: !!locationFilter,
+                volumeFilter: !!volumeFilter
+            });
+            
+            if (!statusFilter) {
+                console.error('statusFilter element not found!');
+                return;
+            }
+            if (!responsibleFilter) {
+                console.error('responsibleFilter element not found!');
+                return;
+            }
+            if (!locationFilter) {
+                console.error('locationFilter element not found!');
+                return;
+            }
+            if (!volumeFilter) {
+                console.error('volumeFilter element not found!');
+                return;
+            }
+            
+            // Add event listeners with error handling
+            try {
+                statusFilter.addEventListener('change', function(e) {
+                    console.log('STATUS FILTER CHANGED! Value:', e.target.value);
+                    applyFilters();
+                });
+                console.log('Status filter event listener added');
+                
+                responsibleFilter.addEventListener('change', function(e) {
+                    console.log('RESPONSIBLE FILTER CHANGED! Value:', e.target.value);
+                    applyFilters();
+                });
+                console.log('Responsible filter event listener added');
+                
+                locationFilter.addEventListener('change', function(e) {
+                    console.log('LOCATION FILTER CHANGED! Value:', e.target.value);
+                    applyFilters();
+                });
+                console.log('Location filter event listener added');
+                
+                volumeFilter.addEventListener('change', function(e) {
+                    console.log('VOLUME FILTER CHANGED! Value:', e.target.value);
+                    applyFilters();
+                });
+                console.log('Volume filter event listener added');
+                
+                console.log('All filter event listeners added successfully');
+                
+            } catch (error) {
+                console.error('Error adding event listeners:', error);
+            }
+            
+            // Test the filters manually after a short delay
+            setTimeout(() => {
+                console.log('Testing filter functionality...');
+                if (statusFilter) {
+                    console.log('Current status filter value:', statusFilter.value);
+                    console.log('Status filter element:', statusFilter);
+                }
+            }, 1000);
+        }
+
+        // Load preparation tasks from API
+        function loadPrepTasks() {
+            console.log('Loading prep tasks from /api/prep_tasks...');
+            fetch('/api/prep_tasks')
+                .then(response => {
+                    console.log('API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Raw API response data:', data);
+                    console.log('Data type:', typeof data, 'Is array:', Array.isArray(data));
+                    console.log('First task sample:', data.length > 0 ? data[0] : 'No tasks');
+                    
+                    if (!Array.isArray(data)) {
+                        console.error('API returned non-array data:', data);
+                        throw new Error('API returned invalid data format');
+                    }
+                    
+                    // Ensure we're working with preparation tasks data
+                    prepTasks = data;
+                    filteredTasks = [...prepTasks];
+                    
+                    // Initialize separate filter systems
+                    timelineFilteredTasks = [...prepTasks];
+                    tableFilteredTasks = [...prepTasks];
+                    
+                    console.log('prepTasks set to:', prepTasks);
+                    console.log('filteredTasks set to:', filteredTasks);
+                    console.log('Number of prep tasks loaded:', prepTasks.length);
+                    
+                    // Verify data structure
+                    if (prepTasks.length > 0) {
+                        console.log('Sample prep task structure:', Object.keys(prepTasks[0]));
+                        console.log('Sample prep task activity_title:', prepTasks[0].activity_title);
+                    }
+                    
+                    // Update UI components with error handling
+                    try {
+                        updateStatistics();
+                        console.log('Statistics updated successfully');
+                    } catch (error) {
+                        console.error('Error updating statistics:', error);
+                    }
+                    
+                    try {
+                        updateCharts();
+                        console.log('Charts updated successfully');
+                    } catch (error) {
+                        console.error('Error updating charts:', error);
+                    }
+                    
+                    try {
+                        populateFilters();
+                        console.log('Filters populated successfully');
+                    } catch (error) {
+                        console.error('Error populating filters:', error);
+                    }
+                    
+                    try {
+                        renderTasksTable();
+                        console.log('Table rendered successfully');
+                    } catch (error) {
+                        console.error('Error rendering table:', error);
+                    }
+                    
+                    try {
+                        updateTimeline();
+                        console.log('Timeline updated successfully');
+                    } catch (error) {
+                        console.error('Error updating timeline:', error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading prep tasks:', error);
+                    showAlert('Error loading preparation tasks', 'danger');
+                    
+                    // Even if there's an error, try to render what we have
+                    if (prepTasks && prepTasks.length > 0) {
+                        try {
+                            updateStatistics();
+                            updateCharts();
+                            populateFilters();
+                            renderTasksTable();
+                            updateTimeline();
+                        } catch (renderError) {
+                            console.error('Error in fallback rendering:', renderError);
+                        }
+                    }
+                });
+        }
+
+        // Update statistics cards
+        function updateStatistics() {
+            const total = filteredTasks.length;
+            const completed = filteredTasks.filter(task => task.status === 'completed').length;
+            const inProgress = filteredTasks.filter(task => task.status === 'in_progress').length;
+            const blocked = filteredTasks.filter(task => task.status === 'blocked').length;
+
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('inProgressTasks').textContent = inProgress;
+            document.getElementById('blockedTasks').textContent = blocked;
+        }
+
+        // Update charts
+        function updateCharts() {
+            updateStatusChart();
+            updateVolumeChart();
+        }
+
+        // Update status chart
+        function updateStatusChart() {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            if (statusChart) {
+                statusChart.destroy();
+            }
+
+            // Auto-update overdue status before calculating counts
+            autoUpdateOverdueStatus(filteredTasks);
+
+            const statusCounts = {
+                'not_started': filteredTasks.filter(task => getEffectiveTaskStatus(task) === 'not_started').length,
+                'in_progress': filteredTasks.filter(task => getEffectiveTaskStatus(task) === 'in_progress').length,
+                'completed': filteredTasks.filter(task => getEffectiveTaskStatus(task) === 'completed').length,
+                'blocked': filteredTasks.filter(task => getEffectiveTaskStatus(task) === 'blocked').length,
+                'overdue': filteredTasks.filter(task => getEffectiveTaskStatus(task) === 'overdue').length
+            };
+
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Not Started', 'In Progress', 'Completed', 'Blocked', 'Overdue'],
+                    datasets: [{
+                        data: [statusCounts.not_started, statusCounts.in_progress, statusCounts.completed, statusCounts.blocked, statusCounts.overdue],
+                        backgroundColor: ['#6c757d', '#ffc107', '#28a745', '#dc3545', '#8B0000'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Timeline variables
+        let currentTimelineDate = new Date();
+        let timelineView = 'month';
+        let timelineGroupBy = 'none';
+        
+        // Separate filter systems
+        let timelineFilteredTasks = []; // For timeline only
+        let tableFilteredTasks = [];    // For table only
+
+        // Update timeline view (replaces volume chart)
+        function updateVolumeChart() {
+            updateTimeline();
+        }
+
+        // Initialize enhanced timeline event listeners - FIXED
+        function initializeTimelineControls() {
+            console.log('Initializing timeline controls...');
+            
+            // Navigation buttons
+            const prevBtn = document.getElementById('prevTimelineRange');
+            const nextBtn = document.getElementById('nextTimelineRange');
+            const resetBtn = document.getElementById('resetTimelineRange');
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    console.log('Previous timeline range clicked');
+                    shiftTimelineRange(-1);
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    console.log('Next timeline range clicked');
+                    shiftTimelineRange(1);
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    console.log('Reset timeline range clicked');
+                    resetTimelineToTaskRange();
+                });
+            }
+
+            // Timeline-specific filters (independent from table filters) - FIXED
+            const timelineGroupBy = document.getElementById('timelineGroupBy');
+            const timelineViewSelect = document.getElementById('timelineView');
+            const timelineStatusFilter = document.getElementById('timelineStatusFilter');
+            const timelineStartDate = document.getElementById('timelineStartDate');
+            const timelineEndDate = document.getElementById('timelineEndDate');
+            const timelineSearch = document.getElementById('timelineSearch');
+            
+            if (timelineGroupBy) {
+                timelineGroupBy.addEventListener('change', (e) => {
+                    console.log('Timeline group by changed:', e.target.value);
+                    timelineGroupBy = e.target.value;
+                    applyTimelineFilters();
+                });
+            }
+
+            if (timelineViewSelect) {
+                timelineViewSelect.addEventListener('change', (e) => {
+                    console.log('Timeline view changed:', e.target.value);
+                    timelineView = e.target.value;
+                    updatePixelsPerDay();
+                    updateTimeline();
+                });
+            }
+
+            if (timelineStatusFilter) {
+                timelineStatusFilter.addEventListener('change', () => {
+                    console.log('Timeline status filter changed');
+                    applyTimelineFilters();
+                });
+            }
+
+            if (timelineStartDate) {
+                timelineStartDate.addEventListener('change', () => {
+                    console.log('Timeline start date changed');
+                    applyCustomDateRange();
+                });
+            }
+
+            if (timelineEndDate) {
+                timelineEndDate.addEventListener('change', () => {
+                    console.log('Timeline end date changed');
+                    applyCustomDateRange();
+                });
+            }
+
+            if (timelineSearch) {
+                timelineSearch.addEventListener('input', () => {
+                    console.log('Timeline search changed');
+                    applyTimelineFilters();
+                });
+            }
+            
+            console.log('Timeline controls initialized successfully');
+        }
+
+        // Shift timeline range by months/weeks/quarters based on current view
+        function shiftTimelineRange(direction) {
+            if (!timelineStartDate || !timelineEndDate) return;
+            
+            const shiftAmount = direction; // -1 for previous, 1 for next
+            let newStart = new Date(timelineStartDate);
+            let newEnd = new Date(timelineEndDate);
+            
+            switch (timelineView) {
+                case 'week':
+                    newStart.setDate(newStart.getDate() + (shiftAmount * 7));
+                    newEnd.setDate(newEnd.getDate() + (shiftAmount * 7));
+                    break;
+                case 'quarter':
+                    newStart.setMonth(newStart.getMonth() + (shiftAmount * 3));
+                    newEnd.setMonth(newEnd.getMonth() + (shiftAmount * 3));
+                    break;
+                default: // month
+                    newStart.setMonth(newStart.getMonth() + shiftAmount);
+                    newEnd.setMonth(newEnd.getMonth() + shiftAmount);
+                    break;
+            }
+            
+            timelineStartDate = newStart;
+            timelineEndDate = newEnd;
+            updateTimeline();
+        }
+
+        // Reset timeline to show full task range
+        function resetTimelineToTaskRange() {
+            const tasksWithDates = getFilteredTimelineTasks();
+            calculateTimelineRange(tasksWithDates);
+            updateTimeline();
+        }
+
+        // Apply custom date range from date inputs
+        function applyCustomDateRange() {
+            const startInput = document.getElementById('timelineStartDate').value;
+            const endInput = document.getElementById('timelineEndDate').value;
+            
+            if (startInput && endInput) {
+                timelineStartDate = new Date(startInput);
+                timelineEndDate = new Date(endInput);
+                updateTimeline();
+            }
+        }
+
+        // Update pixels per day based on view type
+        function updatePixelsPerDay() {
+            switch (timelineView) {
+                case 'week':
+                    pixelsPerDay = 60; // More detailed for week view
+                    break;
+                case 'quarter':
+                    pixelsPerDay = 10; // Compressed for quarter view
+                    break;
+                default: // month
+                    pixelsPerDay = 30; // Standard for month view
+                    break;
+            }
+        }
+        
+        // Apply comprehensive timeline-specific filters (only affects timeline)
+        function applyTimelineFilters() {
+            const searchTerm = document.getElementById('timelineSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('timelineStatusFilter').value;
+            
+            timelineFilteredTasks = prepTasks.filter(task => {
+                // Search filter
+                const matchesSearch = !searchTerm || 
+                    task.activity_title.toLowerCase().includes(searchTerm) ||
+                    (task.responsible && task.responsible.toLowerCase().includes(searchTerm)) ||
+                    (task.description && task.description.toLowerCase().includes(searchTerm));
+                
+                // Status filter
+                const matchesStatus = !statusFilter || task.status === statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            // Update task count in sidebar header
+            const taskCountElement = document.getElementById('timelineTaskCount');
+            if (taskCountElement) {
+                taskCountElement.textContent = `${timelineFilteredTasks.length} tasks`;
+            }
+            
+            updateTimeline();
+        }
+
+        // Timeline variables for Jira-like timeline
+        let selectedTaskId = null;
+        let timelineStartDate = null;
+        let timelineEndDate = null;
+        let pixelsPerDay = 30;
+        let timelineZoomLevel = 1; // 1 = normal, 2 = zoomed in, 0.5 = zoomed out
+
+        // Update timeline - Jira-like implementation
+        function updateTimeline() {
+            const tasksWithDates = getFilteredTimelineTasks();
+            
+            if (tasksWithDates.length === 0) {
+                document.getElementById('timelineBody').innerHTML = '<div class="timeline-empty">No tasks with due dates found</div>';
+                document.getElementById('timelineSidebarContent').innerHTML = '<div class="timeline-empty">No tasks to display</div>';
+                return;
+            }
+
+            // Calculate timeline date range
+            calculateTimelineRange(tasksWithDates);
+            
+            // Create sidebar with task details
+            createTimelineSidebar(tasksWithDates);
+            
+            // Create timeline header (months and weeks)
+            createJiraTimelineHeader();
+            
+            // Create timeline body with duration bars
+            createJiraTimelineBody(tasksWithDates);
+            
+            // Add dependencies
+            createTaskDependencies(tasksWithDates);
+            
+            // Add today line
+            addJiraTodayLine();
+        }
+
+        // Get filtered timeline tasks (uses timeline-specific filters)
+        function getFilteredTimelineTasks() {
+            console.log('getFilteredTimelineTasks called');
+            
+            // Use timelineFilteredTasks if available, otherwise use all prepTasks
+            const sourceData = timelineFilteredTasks.length > 0 ? timelineFilteredTasks : prepTasks;
+            console.log('Timeline source data:', sourceData);
+            console.log('Timeline source data length:', sourceData ? sourceData.length : 'undefined');
+            
+            if (sourceData && sourceData.length > 0) {
+                console.log('Sample timeline task:', sourceData[0]);
+                console.log('Sample timeline task fields:', Object.keys(sourceData[0]));
+            }
+            
+            const searchTerm = document.getElementById('timelineSearch').value.toLowerCase();
+            
+            const tasksWithDates = sourceData.filter(task => {
+                const hasStartOrDue = (task.start_date && task.start_date.trim() !== '') || 
+                                     (task.due_date && task.due_date.trim() !== '');
+                const matchesSearch = !searchTerm || 
+                    task.activity_title.toLowerCase().includes(searchTerm) ||
+                    (task.responsible && task.responsible.toLowerCase().includes(searchTerm));
+                
+                return hasStartOrDue && matchesSearch;
+            });
+            
+            console.log('tasksWithDates for timeline:', tasksWithDates);
+            console.log('tasksWithDates length:', tasksWithDates.length);
+            
+            return tasksWithDates;
+        }
+
+        // Calculate timeline date range - FIXED to always center on current date
+        function calculateTimelineRange(tasks) {
+            const today = new Date();
+            console.log('calculateTimelineRange called, today:', today);
+            
+            // FIXED: Always center on current month regardless of task dates
+            const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            if (tasks.length === 0) {
+                // Default to current month if no tasks
+                timelineStartDate = currentMonthStart;
+                timelineEndDate = currentMonthEnd;
+                console.log('No tasks, using current month:', timelineStartDate, 'to', timelineEndDate);
+                return;
+            }
+            
+            let minDate = null;
+            let maxDate = null;
+            
+            tasks.forEach(task => {
+                const startDate = task.start_date ? parseDate(task.start_date) : null;
+                const dueDate = task.due_date ? parseDate(task.due_date) : null;
+                
+                if (startDate) {
+                    if (!minDate || startDate < minDate) minDate = startDate;
+                    if (!maxDate || startDate > maxDate) maxDate = startDate;
+                }
+                if (dueDate) {
+                    if (!minDate || dueDate < minDate) minDate = dueDate;
+                    if (!maxDate || dueDate > maxDate) maxDate = dueDate;
+                }
+            });
+            
+            // FIXED: Always ensure current month is the center of the timeline
+            if (!minDate || !maxDate) {
+                // No valid dates found, center on current month
+                timelineStartDate = currentMonthStart;
+                timelineEndDate = currentMonthEnd;
+                console.log('No valid dates, using current month:', timelineStartDate, 'to', timelineEndDate);
+                return;
+            }
+            
+            // FIXED: Always include current month in the center
+            // Expand range to include current month if needed
+            if (currentMonthStart < minDate) {
+                minDate = currentMonthStart;
+            }
+            if (currentMonthEnd > maxDate) {
+                maxDate = currentMonthEnd;
+            }
+            
+            // Start from beginning of month containing earliest date
+            const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+            const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+            
+            // FIXED: Ensure we show current month prominently by centering timeline on it
+            // Always show at least 3 months: previous month, current month, next month
+            const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const nextMonthEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+            
+            timelineStartDate = new Date(Math.min(startMonth.getTime(), prevMonth.getTime()));
+            timelineEndDate = new Date(Math.max(endMonth.getTime(), nextMonthEnd.getTime()));
+            
+            console.log('Final timeline range:', timelineStartDate, 'to', timelineEndDate);
+            
+            // FIXED: Set date range inputs to show current month range
+            document.getElementById('timelineStartDate').value = today.toISOString().split('T')[0];
+            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            document.getElementById('timelineEndDate').value = nextMonth.toISOString().split('T')[0];
+        }
+
+        // Create timeline sidebar with task details
+        function createTimelineSidebar(tasks) {
+            const sidebarContent = document.getElementById('timelineSidebarContent');
+            if (!sidebarContent) {
+                console.error('Timeline sidebar content element not found');
+                return;
+            }
+            sidebarContent.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'timeline-task-item';
+                taskItem.dataset.taskId = task.id;
+                
+                if (selectedTaskId === task.id) {
+                    taskItem.classList.add('selected');
+                }
+                
+                const title = document.createElement('div');
+                title.className = 'task-item-title';
+                title.textContent = task.activity_title;
+                
+                const meta = document.createElement('div');
+                meta.className = 'task-item-meta';
+                
+                const status = document.createElement('span');
+                status.className = `task-item-status ${task.status}`;
+                status.textContent = task.status.replace('_', ' ');
+                
+                const assignee = document.createElement('span');
+                assignee.className = 'task-item-assignee';
+                assignee.textContent = task.responsible || 'Unassigned';
+                
+                meta.appendChild(status);
+                meta.appendChild(assignee);
+                
+                const dates = document.createElement('div');
+                dates.className = 'task-item-dates';
+                const startText = task.start_date ? formatDateForDisplay(task.start_date) : 'No start';
+                const dueText = task.due_date ? formatDateForDisplay(task.due_date) : 'No due date';
+                dates.textContent = `${startText} → ${dueText}`;
+                
+                taskItem.appendChild(title);
+                taskItem.appendChild(meta);
+                taskItem.appendChild(dates);
+                
+                // Add click handler
+                taskItem.addEventListener('click', () => {
+                    // Remove previous selection
+                    document.querySelectorAll('.timeline-task-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    
+                    // Add selection to clicked item
+                    taskItem.classList.add('selected');
+                    selectedTaskId = task.id;
+                    
+                    // Highlight corresponding timeline bar
+                    document.querySelectorAll('.timeline-bar').forEach(bar => {
+                        bar.classList.remove('selected');
+                    });
+                    const correspondingBar = document.querySelector(`.timeline-bar[data-task-id="${task.id}"]`);
+                    if (correspondingBar) {
+                        correspondingBar.classList.add('selected');
+                    }
+                });
+                
+                sidebarContent.appendChild(taskItem);
+            });
+        }
+
+        // Create Jira-like timeline header - FIXED to show current month correctly
+        function createJiraTimelineHeader() {
+            const monthsContainer = document.getElementById('timelineMonths');
+            const weeksContainer = document.getElementById('timelineWeeks');
+            
+            if (!monthsContainer) {
+                console.error('Timeline months container not found');
+                return;
+            }
+            if (!weeksContainer) {
+                console.error('Timeline weeks container not found');
+                return;
+            }
+            
+            console.log('Creating timeline header...');
+            monthsContainer.innerHTML = '';
+            weeksContainer.innerHTML = '';
+            
+            const totalDays = Math.ceil((timelineEndDate - timelineStartDate) / (1000 * 60 * 60 * 24));
+            const totalWidth = totalDays * pixelsPerDay;
+            
+            // FIXED: Generate months starting from current month
+            const today = new Date();
+            const currentDate = new Date(timelineStartDate);
+            const months = [];
+            
+            // Ensure we always show the current month prominently
+            const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            while (currentDate <= timelineEndDate) {
+                const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+                
+                const startOffset = Math.max(0, (monthStart - timelineStartDate) / (1000 * 60 * 60 * 24));
+                const endOffset = Math.min(totalDays, (monthEnd - timelineStartDate) / (1000 * 60 * 60 * 24) + 1);
+                const monthWidth = (endOffset - startOffset) * pixelsPerDay;
+                
+                if (monthWidth > 0) {
+                    const monthName = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    const isCurrentMonth = monthStart.getMonth() === today.getMonth() && monthStart.getFullYear() === today.getFullYear();
+                    
+                    months.push({
+                        name: monthName,
+                        width: monthWidth,
+                        left: startOffset * pixelsPerDay,
+                        isCurrent: isCurrentMonth
+                    });
+                }
+                
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+            
+            // Create month headers - FIXED to highlight current month
+            months.forEach(month => {
+                const monthDiv = document.createElement('div');
+                monthDiv.className = 'timeline-month';
+                monthDiv.style.width = `${month.width}px`;
+                monthDiv.style.left = `${month.left}px`;
+                monthDiv.style.position = 'absolute';
+                monthDiv.textContent = month.name;
+                
+                // FIXED: Highlight current month with different styling
+                if (month.isCurrent) {
+                    monthDiv.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    monthDiv.style.fontWeight = '800';
+                    monthDiv.style.border = '2px solid #fff';
+                }
+                
+                monthsContainer.appendChild(monthDiv);
+            });
+            
+            // Set container width
+            monthsContainer.style.width = `${totalWidth}px`;
+            monthsContainer.style.position = 'relative';
+            monthsContainer.style.height = '40px';
+            
+            // Generate weeks
+            const weekDate = new Date(timelineStartDate);
+            weekDate.setDate(weekDate.getDate() - weekDate.getDay()); // Start from Sunday
+            
+            while (weekDate <= timelineEndDate) {
+                const weekStart = new Date(weekDate);
+                const weekEnd = new Date(weekDate);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                const startOffset = Math.max(0, (weekStart - timelineStartDate) / (1000 * 60 * 60 * 24));
+                const endOffset = Math.min(totalDays, (weekEnd - timelineStartDate) / (1000 * 60 * 60 * 24) + 1);
+                const weekWidth = (endOffset - startOffset) * pixelsPerDay;
+                
+                if (weekWidth > 0) {
+                    const weekDiv = document.createElement('div');
+                    weekDiv.className = 'timeline-week';
+                    weekDiv.style.width = `${weekWidth}px`;
+                    weekDiv.style.left = `${startOffset * pixelsPerDay}px`;
+                    weekDiv.style.position = 'absolute';
+                    
+                    // Check if this week contains today
+                    const today = new Date();
+                    if (weekStart <= today && today <= weekEnd) {
+                        weekDiv.classList.add('today');
+                    }
+                    
+                    weekDiv.textContent = weekStart.getDate();
+                    weeksContainer.appendChild(weekDiv);
+                }
+                
+                weekDate.setDate(weekDate.getDate() + 7);
+            }
+            
+            // Set container width
+            weeksContainer.style.width = `${totalWidth}px`;
+            weeksContainer.style.position = 'relative';
+            weeksContainer.style.height = '30px';
+        }
+
+        // Create Jira-like timeline body with duration bars
+        function createJiraTimelineBody(tasks) {
+            const timelineBody = document.getElementById('timelineBody');
+            if (!timelineBody) {
+                console.error('Timeline body element not found');
+                return;
+            }
+            timelineBody.innerHTML = '';
+            
+            const totalDays = Math.ceil((timelineEndDate - timelineStartDate) / (1000 * 60 * 60 * 24));
+            const totalWidth = totalDays * pixelsPerDay;
+            
+            // Set body width
+            timelineBody.style.width = `${totalWidth}px`;
+            timelineBody.style.position = 'relative';
+            
+            tasks.forEach((task, index) => {
+                const row = document.createElement('div');
+                row.className = 'timeline-row';
+                row.style.top = `${index * 48}px`;
+                row.style.position = 'absolute';
+                row.style.width = '100%';
+                row.style.height = '48px';
+                
+                // Create duration bar
+                const bar = createDurationBar(task, index);
+                if (bar) {
+                    row.appendChild(bar);
+                }
+                
+                timelineBody.appendChild(row);
+            });
+            
+            // Set timeline body height
+            timelineBody.style.height = `${tasks.length * 48}px`;
+        }
+
+        // Create duration bar for a task with planned vs current distinction
+        function createDurationBar(task, rowIndex) {
+            const startDate = task.start_date ? parseDate(task.start_date) : null;
+            const dueDate = task.due_date ? parseDate(task.due_date) : null;
+            
+            if (!startDate && !dueDate) return null;
+            
+            const container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.width = '100%';
+            container.style.height = '48px';
+            
+            // Create planned timeline bar (baseline)
+            const plannedBar = createPlannedBar(task, startDate, dueDate);
+            if (plannedBar) {
+                container.appendChild(plannedBar);
+            }
+            
+            // Create current/actual progress bar
+            const currentBar = createCurrentBar(task, startDate, dueDate);
+            if (currentBar) {
+                container.appendChild(currentBar);
+            }
+            
+            return container;
+        }
+        
+        // Create planned timeline bar (dashed, represents original plan)
+        function createPlannedBar(task, startDate, dueDate) {
+            if (!startDate && !dueDate) return null;
+            
+            // Calculate planned bar position and width
+            let barStart = startDate || dueDate;
+            let barEnd = dueDate || startDate;
+            
+            // If only one date is available, create a milestone (single day bar)
+            if (!startDate || !dueDate) {
+                const singleDate = startDate || dueDate;
+                barStart = singleDate;
+                barEnd = new Date(singleDate);
+                barEnd.setDate(barEnd.getDate() + 1); // Make it at least 1 day wide
+            }
+            
+            const startOffset = (barStart - timelineStartDate) / (1000 * 60 * 60 * 24);
+            const duration = Math.max(1, (barEnd - barStart) / (1000 * 60 * 60 * 24));
+            
+            const leftPosition = startOffset * pixelsPerDay;
+            const barWidth = duration * pixelsPerDay;
+            
+            // Create planned bar element
+            const plannedBar = document.createElement('div');
+            plannedBar.className = `timeline-bar planned ${task.status}`;
+            plannedBar.dataset.taskId = task.id;
+            plannedBar.style.left = `${leftPosition}px`;
+            plannedBar.style.width = `${barWidth}px`;
+            
+            // Add planned bar content
+            const content = document.createElement('div');
+            content.className = 'timeline-bar-content';
+            
+            const title = document.createElement('span');
+            title.className = 'timeline-bar-title';
+            title.textContent = 'Planned';
+            title.style.fontSize = '9px';
+            title.style.opacity = '0.8';
+            
+            content.appendChild(title);
+            plannedBar.appendChild(content);
+            
+            // Add tooltip for planned bar
+            const startText = startDate ? formatDateForDisplay(task.start_date) : 'No start';
+            const dueText = dueDate ? formatDateForDisplay(task.due_date) : 'No due date';
+            plannedBar.title = `Planned: ${task.activity_title}\n${startText} → ${dueText}`;
+            
+            return plannedBar;
+        }
+        
+        // Create current/actual progress bar
+        function createCurrentBar(task, startDate, dueDate) {
+            const today = new Date();
+            const progress = task.progress || 0;
+            
+            // Calculate current progress dates
+            let currentStart = startDate;
+            let currentEnd = null;
+            
+            if (task.status === 'not_started') {
+                // Not started - no current bar
+                return null;
+            } else if (task.status === 'completed') {
+                // Completed - show full bar
+                currentStart = startDate || dueDate;
+                currentEnd = dueDate || today;
+            } else if (task.status === 'in_progress') {
+                // In progress - calculate current end based on progress
+                currentStart = startDate || dueDate;
+                if (startDate && dueDate && progress > 0) {
+                    const totalDuration = dueDate - startDate;
+                    const progressDuration = (totalDuration * progress) / 100;
+                    currentEnd = new Date(startDate.getTime() + progressDuration);
+                } else if (progress > 0) {
+                    // If no start date, estimate based on due date and progress
+                    const estimatedStart = dueDate ? new Date(dueDate.getTime() - (30 * 24 * 60 * 60 * 1000)) : today; // 30 days before due
+                    const totalDuration = dueDate ? dueDate - estimatedStart : 30 * 24 * 60 * 60 * 1000;
+                    const progressDuration = (totalDuration * progress) / 100;
+                    currentEnd = new Date(estimatedStart.getTime() + progressDuration);
+                    currentStart = estimatedStart;
+                }
+            } else if (task.status === 'blocked') {
+                // Blocked - show progress up to blocking point
+                currentStart = startDate || dueDate;
+                if (progress > 0 && startDate && dueDate) {
+                    const totalDuration = dueDate - startDate;
+                    const progressDuration = (totalDuration * progress) / 100;
+                    currentEnd = new Date(startDate.getTime() + progressDuration);
+                }
+            }
+            
+            if (!currentStart || !currentEnd) return null;
+            
+            const startOffset = (currentStart - timelineStartDate) / (1000 * 60 * 60 * 24);
+            const duration = Math.max(1, (currentEnd - currentStart) / (1000 * 60 * 60 * 24));
+            
+            const leftPosition = startOffset * pixelsPerDay;
+            const barWidth = duration * pixelsPerDay;
+            
+            // Create current bar element
+            const currentBar = document.createElement('div');
+            currentBar.className = `timeline-bar current ${task.status}`;
+            currentBar.dataset.taskId = task.id;
+            currentBar.style.left = `${leftPosition}px`;
+            currentBar.style.width = `${barWidth}px`;
+            
+            // Check if overdue
+            if (dueDate && currentEnd > dueDate && task.status !== 'completed') {
+                currentBar.classList.add('overdue');
+            }
+            
+            // Create progress overlay within current bar
+            const progressOverlay = document.createElement('div');
+            progressOverlay.className = 'timeline-bar-progress';
+            progressOverlay.style.width = '100%'; // Full width since this bar represents current progress
+            currentBar.appendChild(progressOverlay);
+            
+            // Create bar content
+            const content = document.createElement('div');
+            content.className = 'timeline-bar-content';
+            
+            const title = document.createElement('span');
+            title.className = 'timeline-bar-title';
+            title.textContent = task.activity_title;
+            
+            const progressText = document.createElement('span');
+            progressText.className = 'timeline-bar-progress-text';
+            progressText.textContent = `${progress}%`;
+            
+            content.appendChild(title);
+            content.appendChild(progressText);
+            currentBar.appendChild(content);
+            
+            // Add click handler
+            currentBar.addEventListener('click', () => {
+                // Select task in sidebar
+                document.querySelectorAll('.timeline-task-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                const sidebarItem = document.querySelector(`.timeline-task-item[data-task-id="${task.id}"]`);
+                if (sidebarItem) {
+                    sidebarItem.classList.add('selected');
+                }
+                
+                // Highlight bar
+                document.querySelectorAll('.timeline-bar').forEach(b => {
+                    b.classList.remove('selected');
+                });
+                currentBar.classList.add('selected');
+                selectedTaskId = task.id;
+                
+                // Edit task
+                editTask(task.id);
+            });
+            
+            // Add tooltip for current bar
+            const currentStartText = formatDateForDisplay(currentStart.toISOString().split('T')[0]);
+            const currentEndText = formatDateForDisplay(currentEnd.toISOString().split('T')[0]);
+            currentBar.title = `Current: ${task.activity_title}\n${currentStartText} → ${currentEndText}\nStatus: ${task.status}\nProgress: ${progress}%\nResponsible: ${task.responsible || 'Unassigned'}`;
+            
+            return currentBar;
+        }
+
+        // Create task dependencies
+        function createTaskDependencies(tasks) {
+            const svg = document.getElementById('timelineDependencies');
+            svg.innerHTML = svg.innerHTML; // Keep the defs
+            
+            tasks.forEach(task => {
+                if (task.dependencies && task.dependencies.length > 0) {
+                    task.dependencies.forEach(depId => {
+                        const dependentTask = tasks.find(t => t.id === depId);
+                        if (dependentTask) {
+                            createDependencyLine(dependentTask, task, svg);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Create dependency line between two tasks
+        function createDependencyLine(fromTask, toTask, svg) {
+            const fromBar = document.querySelector(`.timeline-bar[data-task-id="${fromTask.id}"]`);
+            const toBar = document.querySelector(`.timeline-bar[data-task-id="${toTask.id}"]`);
+            
+            if (!fromBar || !toBar) return;
+            
+            const fromRect = fromBar.getBoundingClientRect();
+            const toRect = toBar.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+            
+            const x1 = fromRect.right - svgRect.left;
+            const y1 = fromRect.top + fromRect.height / 2 - svgRect.top;
+            const x2 = toRect.left - svgRect.left;
+            const y2 = toRect.top + toRect.height / 2 - svgRect.top;
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const midX = (x1 + x2) / 2;
+            const pathData = `M ${x1} ${y1} Q ${midX} ${y1} ${midX} ${(y1 + y2) / 2} Q ${midX} ${y2} ${x2} ${y2}`;
+            
+            line.setAttribute('d', pathData);
+            line.setAttribute('class', 'timeline-dependency-line');
+            svg.appendChild(line);
+        }
+
+        // Add today line to Jira timeline
+        function addJiraTodayLine() {
+            const timelineBody = document.getElementById('timelineBody');
+            const today = new Date();
+            
+            if (today >= timelineStartDate && today <= timelineEndDate) {
+                const daysDiff = (today - timelineStartDate) / (1000 * 60 * 60 * 24);
+                const leftPosition = daysDiff * pixelsPerDay;
+                
+                const todayLine = document.createElement('div');
+                todayLine.className = 'timeline-today-line';
+                todayLine.style.left = `${leftPosition}px`;
+                timelineBody.appendChild(todayLine);
+            }
+        }
+
+        // Get group by label
+        function getGroupByLabel() {
+            switch (timelineGroupBy) {
+                case 'responsible': return 'Person';
+                case 'status': return 'Status';
+                case 'volume': return 'Volume';
+                default: return 'Group';
+            }
+        }
+
+        // Populate filter dropdowns
+        function populateFilters() {
+            const responsibleFilter = document.getElementById('responsibleFilter');
+            const locationFilter = document.getElementById('locationFilter');
+            
+            // Populate responsible filter
+            const responsibleSet = new Set(prepTasks.map(task => task.responsible).filter(r => r));
+            responsibleFilter.innerHTML = '<option value="">All Responsible</option>';
+            responsibleSet.forEach(responsible => {
+                const option = document.createElement('option');
+                option.value = responsible;
+                option.textContent = responsible;
+                responsibleFilter.appendChild(option);
+            });
+
+            // Populate location filter (assuming location is stored in a field like 'location')
+            // For now, we'll extract locations from responsible field or add a location field
+            const locationSet = new Set();
+            prepTasks.forEach(task => {
+                // Extract location from task data - you may need to adjust this based on your data structure
+                if (task.location) {
+                    locationSet.add(task.location);
+                } else if (task.responsible && task.responsible.includes(' - ')) {
+                    // If location is part of responsible field like "Name - Location"
+                    const parts = task.responsible.split(' - ');
+                    if (parts.length > 1) {
+                        locationSet.add(parts[1]);
+                    }
+                }
+            });
+            
+            locationFilter.innerHTML = '<option value="">All Locations</option>';
+            locationSet.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationFilter.appendChild(option);
+            });
+
+            // Update filter counts
+            updateFilterCounts();
+        }
+
+        // Update filter counts
+        function updateFilterCounts() {
+            document.getElementById('totalCount').textContent = prepTasks.length;
+            document.getElementById('filteredCount').textContent = filteredTasks.length;
+        }
+
+        // Apply filters (only affects table, not timeline) - using dashboard.html pattern
+        function applyFilters() {
+            console.log('=== applyFilters() called! ===');
+            
+            const statusFilter = document.getElementById('statusFilter').value;
+            const responsibleFilter = document.getElementById('responsibleFilter').value;
+            const locationFilter = document.getElementById('locationFilter').value;
+            const volumeFilter = document.getElementById('volumeFilter').value;
+
+            console.log('Filter values:', {
+                statusFilter,
+                responsibleFilter,
+                locationFilter,
+                volumeFilter
+            });
+
+            console.log('prepTasks data:', prepTasks);
+            console.log('prepTasks length:', prepTasks ? prepTasks.length : 'undefined');
+
+            if (!prepTasks || prepTasks.length === 0) {
+                console.log('No prepTasks data available for filtering');
+                return;
+            }
+
+            // Filter data using exact same pattern as dashboard.html
+            let filteredData = prepTasks.filter(task => {
+                console.log('Filtering task:', task.activity_title, 'status:', task.status);
+                
+                const matchesStatus = !statusFilter || task.status === statusFilter;
+                const matchesResponsible = !responsibleFilter || task.responsible === responsibleFilter;
+                const matchesVolume = !volumeFilter || task.volume === volumeFilter;
+                let matchesLocation = !locationFilter;
+                
+                console.log('Status match:', matchesStatus, '(filter:', statusFilter, 'task:', task.status, ')');
+                
+                if (locationFilter) {
+                    // Check if task has location field or extract from responsible
+                    if (task.location) {
+                        matchesLocation = task.location === locationFilter;
+                    } else if (task.responsible && task.responsible.includes(' - ')) {
+                        const parts = task.responsible.split(' - ');
+                        matchesLocation = parts.length > 1 && parts[1] === locationFilter;
+                    }
+                }
+
+                const passes = matchesStatus && matchesResponsible && matchesVolume && matchesLocation;
+                console.log('Task passes filter:', passes);
+                return passes;
+            });
+
+            console.log('Filtered data length:', filteredData.length, 'from', prepTasks.length, 'total tasks');
+            console.log('Filtered data:', filteredData);
+
+            // Update global filtered data (like dashboard.html)
+            filteredTasks = filteredData;
+            
+            // Update table with filtered data (like dashboard.html)
+            renderTasksTable(filteredData);
+            
+            // Update summary cards with filtered data (like dashboard.html)
+            updateStatistics();
+            
+            // Update charts with filtered data (like dashboard.html)
+            updateCharts();
+            
+            // Update filter counts and indicator
+            updateFilterCounts();
+            updateFilterIndicator();
+            
+            console.log('=== Filter application completed ===');
+            
+            // Note: Timeline is NOT updated here - it has its own independent filters
+        }
+
+        // Update filter indicator
+        function updateFilterIndicator() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const responsibleFilter = document.getElementById('responsibleFilter').value;
+            const locationFilter = document.getElementById('locationFilter').value;
+            const volumeFilter = document.getElementById('volumeFilter').value;
+
+            const activeFilters = [];
+            
+            if (statusFilter) {
+                const statusText = document.getElementById('statusFilter').selectedOptions[0].textContent;
+                activeFilters.push(`Status: ${statusText}`);
+            }
+            
+            if (responsibleFilter) {
+                activeFilters.push(`Responsible: ${responsibleFilter}`);
+            }
+            
+            if (locationFilter) {
+                activeFilters.push(`Location: ${locationFilter}`);
+            }
+            
+            if (volumeFilter) {
+                activeFilters.push(`Volume: ${volumeFilter.toUpperCase()}`);
+            }
+
+            const filterIndicatorRow = document.getElementById('filterIndicatorRow');
+            const filterIndicatorText = document.getElementById('filterIndicatorText');
+
+            if (activeFilters.length > 0) {
+                filterIndicatorText.textContent = activeFilters.join(', ');
+                filterIndicatorRow.style.display = 'block';
+            } else {
+                filterIndicatorRow.style.display = 'none';
+            }
+        }
+
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('responsibleFilter').value = '';
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('volumeFilter').value = '';
+            
+            // Clear timeline filters too
+            document.getElementById('timelineSearch').value = '';
+            document.getElementById('timelineGroupBy').value = 'none';
+            
+            // Reset both filter systems
+            filteredTasks = [...prepTasks];
+            tableFilteredTasks = [...prepTasks];
+            timelineFilteredTasks = [...prepTasks];
+            
+            updateStatistics();
+            updateCharts();
+            renderTasksTable();
+            updateFilterCounts();
+            updateFilterIndicator();
+            updateTimeline();
+        }
+
+        // Render tasks table (like dashboard.html pattern)
+        function renderTasksTable(dataToRender = filteredTasks) {
+            const tbody = document.getElementById('tasksTableBody');
+            
+            if (!tbody) {
+                console.error('Table body element not found. DOM may not be ready yet.');
+                return;
+            }
+            
+            try {
+                tbody.innerHTML = '';
+
+                if (!dataToRender || dataToRender.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            No preparation tasks found. Upload an Excel file or add tasks manually.
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    return;
+                }
+
+                dataToRender.forEach((task, index) => {
+                    try {
+                        console.log(`Rendering table task ${index + 1}:`, task);
+                        console.log(`Task ${index + 1} activity_title:`, task.activity_title);
+                        
+                        const row = document.createElement('tr');
+                        
+                        // Format due date and check if overdue
+                        let dueDateClass = '';
+                        let dueDateText = task.due_date ? formatDateForDisplay(task.due_date) : '-';
+                        if (task.due_date) {
+                            try {
+                                const today = new Date();
+                                const dueDate = parseDate(task.due_date);
+                                if (dueDate) {
+                                    const diffTime = dueDate - today;
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    if (diffDays < 0) {
+                                        dueDateClass = 'due-date-warning';
+                                        dueDateText += ' (Overdue)';
+                                    } else if (diffDays <= 7) {
+                                        dueDateClass = 'due-date-upcoming';
+                                        dueDateText += ` (${diffDays} days)`;
+                                    }
+                                }
+                            } catch (dateError) {
+                                console.warn('Date parsing error for task', task.id, ':', dateError);
+                            }
+                        }
+
+                        // Ensure we have the correct field names from the backend with safe fallbacks
+                        const activityTitle = String(task.activity_title || task.test || task.title || 'Untitled Task');
+                        const description = String(task.description || '-');
+                        const responsible = String(task.responsible || '-');
+                        const volume = String(task.volume || 'm');
+                        const blocker = String(task.blocker || '-');
+                        const progress = Number(task.progress || 0);
+                        const status = String(task.status || 'not_started');
+                        const taskId = Number(task.id);
+
+                        console.log(`Task ${index + 1} processed fields:`, {
+                            activityTitle, description, responsible, volume, blocker, progress, status, taskId
+                        });
+
+                        // Create table row with proper escaping
+                        const activityTitleCell = document.createElement('td');
+                        activityTitleCell.innerHTML = `<strong>${activityTitle}</strong>`;
+                        
+                        const descriptionCell = document.createElement('td');
+                        descriptionCell.textContent = description;
+                        
+                        const dueDateCell = document.createElement('td');
+                        dueDateCell.className = dueDateClass;
+                        dueDateCell.textContent = dueDateText;
+                        
+                        const statusCell = document.createElement('td');
+                        const effectiveStatus = getEffectiveTaskStatus(task);
+                        statusCell.innerHTML = getStatusBadge(effectiveStatus);
+                        
+                        // Add row class for overdue tasks (same as test plan dashboard)
+                        if (effectiveStatus === 'overdue') {
+                            row.classList.add('table-warning');
+                        }
+                        
+                        const progressCell = document.createElement('td');
+                        progressCell.innerHTML = `
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <small class="text-muted">${progress}%</small>
+                        `;
+                        
+                        const responsibleCell = document.createElement('td');
+                        responsibleCell.textContent = responsible;
+                        
+                        const volumeCell = document.createElement('td');
+                        volumeCell.innerHTML = getVolumeBadge(volume);
+                        
+                        const blockerCell = document.createElement('td');
+                        blockerCell.textContent = blocker;
+                        
+                        const actionsCell = document.createElement('td');
+                        actionsCell.innerHTML = `
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="showStatusModal(${taskId})" title="Update Status">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="editTask(${taskId})" title="Edit Task">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${taskId})" title="Delete Task">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                        
+                        // Append all cells to row
+                        row.appendChild(activityTitleCell);
+                        row.appendChild(descriptionCell);
+                        row.appendChild(dueDateCell);
+                        row.appendChild(statusCell);
+                        row.appendChild(progressCell);
+                        row.appendChild(responsibleCell);
+                        row.appendChild(volumeCell);
+                        row.appendChild(blockerCell);
+                        row.appendChild(actionsCell);
+                        
+                        tbody.appendChild(row);
+                        console.log(`Successfully rendered table task ${index + 1}`);
+                        
+                    } catch (taskError) {
+                        console.error(`Error rendering table task ${index + 1}:`, taskError, 'Task data:', task);
+                        // Continue with next task instead of failing completely
+                    }
+                });
+                
+                console.log('Table rendering completed successfully');
+                
+            } catch (error) {
+                console.error('Error in renderTasksTable:', error);
+                // Show error message in table
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
+                            Error loading tasks. Please refresh the page.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Parse date in DD.MM.YYYY format for consistency
+        function parseDate(dateString) {
+            if (!dateString) return null;
+            
+            // Try DD.MM.YYYY format first (our standard format)
+            let parts = dateString.split('.');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                const year = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+            
+            // Try YYYY-MM-DD format (backend format)
+            parts = dateString.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                const day = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+            
+            // Fallback to DD/MM/YYYY format for backward compatibility
+            parts = dateString.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                const year = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+            return null;
+        }
+
+        // Get status badge HTML
+        function getStatusBadge(status) {
+            const badges = {
+                'not_started': '<span class="badge bg-secondary status-badge">Not Started</span>',
+                'in_progress': '<span class="badge bg-warning status-badge">In Progress</span>',
+                'completed': '<span class="badge bg-success status-badge">Completed</span>',
+                'blocked': '<span class="badge bg-danger status-badge">Blocked</span>',
+                'overdue': '<span class="badge bg-dark status-badge">Overdue</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary status-badge">Unknown</span>';
+        }
+
+        // Get effective task status (including auto-calculated overdue)
+        function getEffectiveTaskStatus(task) {
+            if (isTaskOverdue(task)) return 'overdue';
+            return task.status;
+        }
+
+        // Check if task is overdue (same logic as test plan dashboard)
+        function isTaskOverdue(task) {
+            if (!task.due_date || task.status === 'completed') return false;
+            const today = new Date();
+            const dueDate = parseDate(task.due_date);
+            return dueDate && dueDate < today;
+        }
+
+        // Get effective task status (including auto-calculated overdue)
+        function getEffectiveTaskStatus(task) {
+            if (isTaskOverdue(task)) return 'overdue';
+            return task.status;
+        }
+
+        // Auto-update overdue status based on due dates (same logic as test plan dashboard)
+        function autoUpdateOverdueStatus(data) {
+            const today = new Date();
+            data.forEach(task => {
+                if (task.due_date && task.status !== 'completed') {
+                    const dueDate = parseDate(task.due_date);
+                    if (dueDate && dueDate < today) {
+                        // Only auto-update if not manually set to overdue already
+                        if (task.status !== 'overdue') {
+                            // Update the task status in the backend
+                            updateTaskStatusInBackground(task.id, 'overdue');
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update task status in background without user interaction (same logic as test plan dashboard)
+        function updateTaskStatusInBackground(taskId, newStatus) {
+            fetch('/api/update_prep_task_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: taskId,
+                    status: newStatus,
+                    progress: 0, // Reset progress for overdue items
+                    blocker: ''
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Silently update the local data
+                    const task = prepTasks.find(t => t.id === taskId);
+                    if (task) {
+                        task.status = newStatus;
+                    }
+                }
+            })
+            .catch(error => {
+                console.warn('Background status update failed for task', taskId, ':', error);
+            });
+        }
+
+        // Get volume badge HTML
+        function getVolumeBadge(volume) {
+            const badges = {
+                'xs': '<span class="badge bg-info volume-badge">XS</span>',
+                's': '<span class="badge bg-success volume-badge">S</span>',
+                'm': '<span class="badge bg-warning volume-badge">M</span>',
+                'l': '<span class="badge bg-primary volume-badge">L</span>',
+                'xl': '<span class="badge bg-danger volume-badge">XL</span>'
+            };
+            return badges[volume] || '<span class="badge bg-secondary volume-badge">-</span>';
+        }
+
+        // Show add task modal
+        function showAddTaskModal() {
+            document.getElementById('taskModalTitle').textContent = 'Add New Task';
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            new bootstrap.Modal(document.getElementById('taskModal')).show();
+        }
+
+        // Format date for HTML5 date input (convert DD.MM.YYYY to YYYY-MM-DD)
+        function formatDateForInput(dateString) {
+            if (!dateString) return '';
+            // Convert DD.MM.YYYY to YYYY-MM-DD for HTML5 date inputs
+            const parts = dateString.split('.');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return dateString;
+        }
+
+        // Format date for display (convert YYYY-MM-DD to DD.MM.YYYY)
+        function formatDateForDisplay(dateString) {
+            if (!dateString) return '';
+            // If already in DD.MM.YYYY format, return as is
+            if (dateString.includes('.')) return dateString;
+            
+            // If in YYYY-MM-DD format, convert to DD.MM.YYYY
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}.${month}.${year}`;
+            }
+            return dateString;
+        }
+
+        // Edit task
+        function editTask(taskId) {
+            const task = prepTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('taskModalTitle').textContent = 'Edit Task';
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('activityTitle').value = task.activity_title;
+            document.getElementById('description').value = task.description || '';
+            document.getElementById('startDate').value = formatDateForInput(task.start_date) || '';
+            document.getElementById('dueDate').value = formatDateForInput(task.due_date) || '';
+            document.getElementById('status').value = task.status;
+            document.getElementById('progress').value = task.progress;
+            document.getElementById('responsible').value = task.responsible || '';
+            document.getElementById('location').value = task.location || '';
+            document.getElementById('blocker').value = task.blocker || '';
+            document.getElementById('volume').value = task.volume;
+
+            new bootstrap.Modal(document.getElementById('taskModal')).show();
+        }
+
+        // Save task
+        function saveTask() {
+            const taskId = document.getElementById('taskId').value;
+            const taskData = {
+                activity_title: document.getElementById('activityTitle').value,
+                description: document.getElementById('description').value,
+                start_date: document.getElementById('startDate').value,
+                due_date: document.getElementById('dueDate').value,
+                status: document.getElementById('status').value,
+                progress: parseInt(document.getElementById('progress').value),
+                responsible: document.getElementById('responsible').value,
+                location: document.getElementById('location').value,
+                blocker: document.getElementById('blocker').value,
+                volume: document.getElementById('volume').value
+            };
+
+            if (!taskData.activity_title.trim()) {
+                showAlert('Activity title is required', 'danger');
+                return;
+            }
+
+            const url = taskId ? '/api/update_prep_task' : '/api/add_prep_task';
+            if (taskId) {
+                taskData.id = parseInt(taskId);
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(taskData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
+                    loadPrepTasks();
+                } else {
+                    showAlert(data.error || 'Error saving task', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving task:', error);
+                showAlert('Error saving task', 'danger');
+            });
+        }
+
+        // Show status modal
+        function showStatusModal(taskId) {
+            const task = prepTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('statusTaskId').value = task.id;
+            document.getElementById('newStatus').value = task.status;
+            document.getElementById('newProgress').value = task.progress;
+            document.getElementById('newBlocker').value = task.blocker || '';
+
+            // Show/hide blocker input based on status
+            toggleBlockerInput();
+            document.getElementById('newStatus').addEventListener('change', toggleBlockerInput);
+
+            new bootstrap.Modal(document.getElementById('statusModal')).show();
+        }
+
+        // Toggle blocker input visibility
+        function toggleBlockerInput() {
+            const status = document.getElementById('newStatus').value;
+            const blockerDiv = document.getElementById('blockerInputDiv');
+            blockerDiv.style.display = status === 'blocked' ? 'block' : 'none';
+        }
+
+        // Update task status
+        function updateTaskStatus() {
+            const taskId = parseInt(document.getElementById('statusTaskId').value);
+            const newStatus = document.getElementById('newStatus').value;
+            const newProgress = parseInt(document.getElementById('newProgress').value);
+            const newBlocker = document.getElementById('newBlocker').value;
+
+            const statusData = {
+                id: taskId,
+                status: newStatus,
+                progress: newProgress,
+                blocker: newStatus === 'blocked' ? newBlocker : ''
+            };
+
+            fetch('/api/update_prep_task_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(statusData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
+                    loadPrepTasks();
+                } else {
+                    showAlert(data.error || 'Error updating status', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating status:', error);
+                showAlert('Error updating status', 'danger');
+            });
+        }
+
+        // Delete task
+        function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) {
+                return;
+            }
+
+            fetch('/api/delete_prep_task', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: taskId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadPrepTasks();
+                } else {
+                    showAlert(data.error || 'Error deleting task', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting task:', error);
+                showAlert('Error deleting task', 'danger');
+            });
+        }
+
+        // Upload file
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showAlert('Please select a file to upload', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/api/upload_prep_tasks', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadPrepTasks();
+                    fileInput.value = '';
+                } else {
+                    showAlert(data.error || 'Error uploading file', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading file:', error);
+                showAlert('Error uploading file', 'danger');
+            });
+        }
+
+        // Import from SharePoint
+        function importFromSharePoint() {
+            showAlert('Importing from SharePoint...', 'info');
+
+            fetch('/api/import_prep_tasks_sharepoint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadPrepTasks();
+                } else {
+                    showAlert(data.error || 'Error importing from SharePoint', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error importing from SharePoint:', error);
+                showAlert('Error importing from SharePoint', 'danger');
+            });
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            showAlert('Exporting data...', 'info');
+
+            fetch('/api/export')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        // Create a temporary link to download the file
+                        const link = document.createElement('a');
+                        link.href = data.download_url;
+                        link.download = data.filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        showAlert(data.error || 'Error exporting data', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error exporting data:', error);
+                    showAlert('Error exporting data', 'danger');
+                });
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            // Create new alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // Insert at the top of the container
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

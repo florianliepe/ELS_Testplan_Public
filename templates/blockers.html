@@ -1,0 +1,679 @@
+{% extends "base.html" %}
+
+{% block title %}Blockers Dashboard - Test Plan Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <!-- Summary Cards -->
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalBlockers">0</h4>
+                        <p class="card-text">Total Blockers</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="openBlockers">0</h4>
+                        <p class="card-text">Open</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="inProgressBlockers">0</h4>
+                        <p class="card-text">In Progress</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="resolvedBlockers">0</h4>
+                        <p class="card-text">Resolved</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Blocker Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="blockerStatusChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Priority Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="priorityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Controls -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Filter by Status:</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="open">Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="priorityFilter" class="form-label">Filter by Priority:</label>
+                        <select class="form-select" id="priorityFilter">
+                            <option value="">All Priorities</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="responsibleFilter" class="form-label">Filter by Responsible:</label>
+                        <select class="form-select" id="responsibleFilter">
+                            <option value="">All People</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchFilter" class="form-label">Search Blockers:</label>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search by name or description">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Blockers Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list me-2"></i>Blocker Details</h5>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" onclick="showAddBlockerModal()">
+                        <i class="fas fa-plus me-1"></i>Add Blocker
+                    </button>
+                    <button class="btn btn-info btn-sm me-2" onclick="exportToExcel()">
+                        <i class="fas fa-download me-1"></i>Export Excel
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="blockerTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Blocker Name</th>
+                                <th>Description</th>
+                                <th>Responsible</th>
+                                <th>Start Date</th>
+                                <th>Priority</th>
+                                <th>Resolution Status</th>
+                                <th>Affected Tests</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blockerTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Blocker Modal -->
+<div class="modal fade" id="addBlockerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Blocker</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBlockerForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerName" class="form-label">Blocker Name</label>
+                                <input type="text" class="form-control" id="addBlockerName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerPriority" class="form-label">Priority</label>
+                                <select class="form-select" id="addBlockerPriority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addBlockerDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="addBlockerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerResponsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="addBlockerResponsible">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addBlockerStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="addBlockerStartDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addBlockerStatus" class="form-label">Resolution Status</label>
+                        <select class="form-select" id="addBlockerStatus">
+                            <option value="open" selected>Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="addNewBlocker()">Add Blocker</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Blocker Modal -->
+<div class="modal fade" id="editBlockerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Blocker</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editBlockerForm">
+                    <input type="hidden" id="editBlockerId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editBlockerName" class="form-label">Blocker Name</label>
+                                <input type="text" class="form-control" id="editBlockerName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editBlockerPriority" class="form-label">Priority</label>
+                                <select class="form-select" id="editBlockerPriority">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editBlockerDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editBlockerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editBlockerResponsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="editBlockerResponsible">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editBlockerStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="editBlockerStartDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editBlockerStatus" class="form-label">Resolution Status</label>
+                        <select class="form-select" id="editBlockerStatus">
+                            <option value="open">Open</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveBlockerChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let blockerData = [];
+    let statusChart, priorityChart;
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadData();
+        setupEventListeners();
+        handleUrlParameters();
+    });
+
+    function setupEventListeners() {
+        // Filter event listeners
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('priorityFilter').addEventListener('change', applyFilters);
+        document.getElementById('responsibleFilter').addEventListener('change', applyFilters);
+        document.getElementById('searchFilter').addEventListener('input', applyFilters);
+    }
+
+    function handleUrlParameters() {
+        // Check for URL search parameters and auto-populate filters
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        
+        if (searchParam) {
+            // Set the search filter value
+            document.getElementById('searchFilter').value = searchParam;
+            
+            // Apply filters after a short delay to ensure data is loaded
+            setTimeout(() => {
+                applyFilters();
+                // Highlight the search field to show it's been auto-populated
+                const searchField = document.getElementById('searchFilter');
+                searchField.focus();
+                searchField.select();
+            }, 500);
+        }
+    }
+
+    function loadData() {
+        fetch('/api/blockers')
+            .then(response => response.json())
+            .then(data => {
+                blockerData = data;
+                updateSummaryCards();
+                updateCharts();
+                populateFilters();
+                renderTable();
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('blockerTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="text-center text-danger">Error loading data. Please try again.</td></tr>';
+            });
+    }
+
+    function updateSummaryCards() {
+        const total = blockerData.length;
+        const open = blockerData.filter(blocker => blocker.resolution_status === 'open').length;
+        const inProgress = blockerData.filter(blocker => blocker.resolution_status === 'in progress').length;
+        const resolved = blockerData.filter(blocker => blocker.resolution_status === 'resolved').length;
+
+        document.getElementById('totalBlockers').textContent = total;
+        document.getElementById('openBlockers').textContent = open;
+        document.getElementById('inProgressBlockers').textContent = inProgress;
+        document.getElementById('resolvedBlockers').textContent = resolved;
+    }
+
+    function updateCharts() {
+        const statusCounts = {
+            'open': blockerData.filter(blocker => blocker.resolution_status === 'open').length,
+            'in progress': blockerData.filter(blocker => blocker.resolution_status === 'in progress').length,
+            'resolved': blockerData.filter(blocker => blocker.resolution_status === 'resolved').length,
+            'closed': blockerData.filter(blocker => blocker.resolution_status === 'closed').length
+        };
+
+        const priorityCounts = {
+            'high': blockerData.filter(blocker => blocker.priority === 'high').length,
+            'medium': blockerData.filter(blocker => blocker.priority === 'medium').length,
+            'low': blockerData.filter(blocker => blocker.priority === 'low').length
+        };
+
+        // Status Chart
+        const statusCtx = document.getElementById('blockerStatusChart').getContext('2d');
+        if (statusChart) statusChart.destroy();
+        
+        statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Open', 'In Progress', 'Resolved', 'Closed'],
+                datasets: [{
+                    data: [statusCounts.open, statusCounts['in progress'], statusCounts.resolved, statusCounts.closed],
+                    backgroundColor: ['#dc3545', '#ffc107', '#198754', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Priority Chart
+        const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+        if (priorityChart) priorityChart.destroy();
+        
+        priorityChart = new Chart(priorityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['High', 'Medium', 'Low'],
+                datasets: [{
+                    label: 'Number of Blockers',
+                    data: [priorityCounts.high, priorityCounts.medium, priorityCounts.low],
+                    backgroundColor: ['#dc3545', '#ffc107', '#198754']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function populateFilters() {
+        const responsibleSet = new Set(blockerData.map(blocker => blocker.responsible).filter(r => r));
+        const responsibleFilter = document.getElementById('responsibleFilter');
+
+        // Clear existing options (except "All")
+        responsibleFilter.innerHTML = '<option value="">All People</option>';
+
+        // Add unique values
+        responsibleSet.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person;
+            option.textContent = person;
+            responsibleFilter.appendChild(option);
+        });
+    }
+
+    function renderTable(filteredData = blockerData) {
+        const tbody = document.getElementById('blockerTableBody');
+        tbody.innerHTML = '';
+
+        if (filteredData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">No blockers found.</td></tr>';
+            return;
+        }
+
+        filteredData.forEach(blocker => {
+            const affectedTests = blocker.affected_tests || [];
+            const affectedTestsHtml = affectedTests.length > 0 
+                ? affectedTests.map(test => 
+                    `<span class="badge bg-info me-1" title="${test.test} - ${test.responsible}">${test.test}</span>`
+                  ).join('')
+                : '<span class="text-muted">No tests affected</span>';
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${blocker.name}</strong></td>
+                <td>${blocker.description}</td>
+                <td>${blocker.responsible}</td>
+                <td>${blocker.start_date || '-'}</td>
+                <td><span class="badge bg-${getPriorityColor(blocker.priority)}">${blocker.priority.toUpperCase()}</span></td>
+                <td><span class="badge bg-${getStatusColor(blocker.resolution_status)}">${blocker.resolution_status.toUpperCase()}</span></td>
+                <td>${affectedTestsHtml}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editBlocker(${blocker.id})" title="Edit Blocker">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBlocker(${blocker.id})" title="Delete Blocker">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function getPriorityColor(priority) {
+        switch(priority) {
+            case 'high': return 'danger';
+            case 'medium': return 'warning';
+            case 'low': return 'success';
+            default: return 'secondary';
+        }
+    }
+
+    function getStatusColor(status) {
+        switch(status) {
+            case 'open': return 'danger';
+            case 'in progress': return 'warning';
+            case 'resolved': return 'success';
+            case 'closed': return 'secondary';
+            default: return 'secondary';
+        }
+    }
+
+    function applyFilters() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const responsibleFilter = document.getElementById('responsibleFilter').value;
+        const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+
+        let filteredData = blockerData.filter(blocker => {
+            const matchesStatus = !statusFilter || blocker.resolution_status === statusFilter;
+            const matchesPriority = !priorityFilter || blocker.priority === priorityFilter;
+            const matchesResponsible = !responsibleFilter || blocker.responsible === responsibleFilter;
+            const matchesSearch = !searchFilter || 
+                blocker.name.toLowerCase().includes(searchFilter) || 
+                blocker.description.toLowerCase().includes(searchFilter);
+
+            return matchesStatus && matchesPriority && matchesResponsible && matchesSearch;
+        });
+
+        renderTable(filteredData);
+    }
+
+    function showAddBlockerModal() {
+        // Clear form and set default date
+        document.getElementById('addBlockerForm').reset();
+        document.getElementById('addBlockerStartDate').value = new Date().toISOString().split('T')[0];
+        
+        new bootstrap.Modal(document.getElementById('addBlockerModal')).show();
+    }
+
+    function addNewBlocker() {
+        const blockerData = {
+            name: document.getElementById('addBlockerName').value,
+            description: document.getElementById('addBlockerDescription').value,
+            responsible: document.getElementById('addBlockerResponsible').value,
+            start_date: document.getElementById('addBlockerStartDate').value,
+            priority: document.getElementById('addBlockerPriority').value,
+            resolution_status: document.getElementById('addBlockerStatus').value
+        };
+
+        if (!blockerData.name.trim()) {
+            alert('Please enter a blocker name');
+            return;
+        }
+
+        fetch('/api/add_blocker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(blockerData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addBlockerModal')).hide();
+                loadData(); // Refresh the data
+            } else {
+                alert('Error adding blocker: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error adding blocker: ' + error.message);
+        });
+    }
+
+    function editBlocker(blockerId) {
+        const blocker = blockerData.find(b => b.id === blockerId);
+        if (!blocker) return;
+
+        document.getElementById('editBlockerId').value = blockerId;
+        document.getElementById('editBlockerName').value = blocker.name;
+        document.getElementById('editBlockerDescription').value = blocker.description;
+        document.getElementById('editBlockerResponsible').value = blocker.responsible;
+        document.getElementById('editBlockerStartDate').value = blocker.start_date;
+        document.getElementById('editBlockerPriority').value = blocker.priority;
+        document.getElementById('editBlockerStatus').value = blocker.resolution_status;
+
+        new bootstrap.Modal(document.getElementById('editBlockerModal')).show();
+    }
+
+    function saveBlockerChanges() {
+        const blockerId = parseInt(document.getElementById('editBlockerId').value);
+        const blockerData = {
+            id: blockerId,
+            name: document.getElementById('editBlockerName').value,
+            description: document.getElementById('editBlockerDescription').value,
+            responsible: document.getElementById('editBlockerResponsible').value,
+            start_date: document.getElementById('editBlockerStartDate').value,
+            priority: document.getElementById('editBlockerPriority').value,
+            resolution_status: document.getElementById('editBlockerStatus').value
+        };
+
+        fetch('/api/update_blocker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(blockerData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editBlockerModal')).hide();
+                loadData(); // Refresh the data
+            } else {
+                alert('Error updating blocker: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error updating blocker: ' + error.message);
+        });
+    }
+
+    function deleteBlocker(blockerId) {
+        const blocker = blockerData.find(b => b.id === blockerId);
+        if (!blocker) return;
+
+        if (confirm(`Are you sure you want to delete the blocker "${blocker.name}"?`)) {
+            fetch('/api/delete_blocker', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: blockerId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadData(); // Refresh the data
+                } else {
+                    alert('Error deleting blocker: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting blocker: ' + error.message);
+            });
+        }
+    }
+
+    function exportToExcel() {
+        fetch('/api/export')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create a temporary link to download the file
+                    const link = document.createElement('a');
+                    link.href = data.download_url;
+                    link.download = data.filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    alert('Error exporting data: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error exporting data: ' + error.message);
+            });
+    }
+
+    function refreshData() {
+        loadData();
+    }
+</script>
+{% endblock %}
