@@ -1,4 +1,4 @@
-name: Deploy ELS Testplan Dashboard
+name: Test ELS Testplan Dashboard for Codespaces
 
 on:
   push:
@@ -27,71 +27,42 @@ jobs:
     
     - name: Run basic tests
       run: |
-        python -c "import app; print('App imports successfully')"
-        python -c "from app import app; print('Flask app created successfully')"
+        python -c "import app; print('✅ App imports successfully')"
+        python -c "from app import app; print('✅ Flask app created successfully')"
+    
+    - name: Test Codespaces configuration
+      run: |
+        echo "✅ Testing Codespaces configuration..."
+        test -f .devcontainer/devcontainer.json && echo "✅ devcontainer.json exists"
+        test -f .devcontainer/setup.sh && echo "✅ setup.sh exists"
+        test -f GITHUB_CODESPACES_DEPLOYMENT.md && echo "✅ Deployment guide exists"
+    
+    - name: Validate application structure
+      run: |
+        echo "✅ Validating application structure..."
+        test -d templates && echo "✅ Templates directory exists"
+        test -d uploads && echo "✅ Uploads directory exists"
+        test -f requirements.txt && echo "✅ Requirements file exists"
+        test -f app.py && echo "✅ Main application file exists"
 
-  deploy-heroku:
+  codespaces-ready:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy to Heroku
-      uses: akhileshns/heroku-deploy@v3.12.14
-      with:
-        heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-        heroku_app_name: ${{secrets.HEROKU_APP_NAME}}
-        heroku_email: ${{secrets.HEROKU_EMAIL}}
-        healthcheck: "https://${{secrets.HEROKU_APP_NAME}}.herokuapp.com/"
-        checkstring: "Test Plan Dashboard"
-        delay: 5
-        rollbackonhealthcheckfailed: true
-
-  deploy-railway:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Railway CLI
-      run: npm install -g @railway/cli
-    
-    - name: Deploy to Railway
+    - name: Verify Codespaces readiness
       run: |
-        railway login --token ${{ secrets.RAILWAY_TOKEN }}
-        railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-  deploy-render:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to Render
-      run: |
-        curl -X POST \
-          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}' \
-          https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
-
-  notify:
-    needs: [deploy-heroku, deploy-railway, deploy-render]
-    runs-on: ubuntu-latest
-    if: always() && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Notify deployment status
-      run: |
-        echo "Deployment completed!"
-        echo "Heroku: ${{ needs.deploy-heroku.result }}"
-        echo "Railway: ${{ needs.deploy-railway.result }}"
-        echo "Render: ${{ needs.deploy-render.result }}"
+        echo "🚀 ELS Testplan Dashboard is ready for GitHub Codespaces!"
+        echo ""
+        echo "📋 To use the dashboard:"
+        echo "1. Go to the repository on GitHub"
+        echo "2. Click 'Code' → 'Codespaces' → 'Create codespace on main'"
+        echo "3. Wait for automatic setup (2-3 minutes)"
+        echo "4. Run: python app.py"
+        echo "5. Open the forwarded port 5000"
+        echo "6. Login with: admin / admin123"
+        echo ""
+        echo "📖 Full documentation: GITHUB_CODESPACES_DEPLOYMENT.md"
