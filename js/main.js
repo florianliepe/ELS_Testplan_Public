@@ -1,64 +1,120 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('excel-file-input');
-    const messageArea = document.getElementById('message-area');
+document.addEventListener('DOMContentLoaded', () => {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const uploadStatus = document.getElementById('upload-status');
 
-    if (fileInput) {
-        fileInput.addEventListener('change', handleFileSelect);
-    }
+    // --- Event Listeners ---
 
-    function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            messageArea.textContent = 'No file selected.';
+    // Prevent default browser behavior for drag-and-drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    // Add a visual indicator when a file is dragged over
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('dragover');
+        }, false);
+    });
+
+    // Remove the visual indicator when the file leaves
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('dragover');
+        }, false);
+    });
+
+    // Handle the file drop
+    uploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    }, false);
+
+    // Allow clicking the area to open the file browser
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Handle file selection from the file browser
+    fileInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    // --- Core File Handling Function ---
+
+    function handleFile(file) {
+        // Check if the file is an Excel file
+        const validExtensions = ['.xlsx', '.xls', '.csv'];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+        if (!validExtensions.includes(fileExtension)) {
+            showStatus('Error: Please upload a valid Excel file (.xlsx, .xls, or .csv).', true);
             return;
         }
 
-        messageArea.textContent = 'Processing file...';
+        showStatus(`Processing "${file.name}"...`, false);
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = (e) => {
             try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
 
-                // Define the sheets we want to extract
                 const requiredSheets = ['Test Plan', 'Preparation Tasks', 'Blockers'];
                 let allSheetsFound = true;
 
+                // Clear any old data from previous sessions
+                sessionStorage.clear();
+
                 requiredSheets.forEach(sheetName => {
-                    if (workbook.SheetNames.includes(sheetName)) {
-                        const worksheet = workbook.Sheets[sheetName];
-                        // Convert sheet to JSON format
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                        // Store the JSON data in the browser's session storage
+                    if (workbook.Sheets[sheetName]) {
+                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                         sessionStorage.setItem(sheetName, JSON.stringify(jsonData));
-                        console.log(`Successfully processed and stored '${sheetName}'`);
+                        console.log(`Successfully processed and stored "${sheetName}".`);
                     } else {
+                        showStatus(`Error: Required sheet "${sheetName}" was not found in the Excel file.`, true);
                         allSheetsFound = false;
-                        console.error(`Sheet '${sheetName}' not found in the Excel file.`);
                     }
                 });
 
                 if (allSheetsFound) {
-                    messageArea.textContent = 'File processed successfully! Redirecting to dashboard...';
-                    // Redirect to the dashboard page after a short delay
+                    showStatus('Success! Redirecting to dashboard...', false);
+                    // Redirect to the dashboard after a short delay
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
-                    }, 1500);
-                } else {
-                    messageArea.textContent = 'Error: One or more required sheets were not found in the file. Please check the Excel file.';
+                    }, 1000);
                 }
 
             } catch (error) {
-                messageArea.textContent = `An error occurred while processing the file: ${error.message}`;
                 console.error(error);
+                showStatus('An unexpected error occurred while processing the file.', true);
             }
         };
 
-        reader.onerror = function() {
-            messageArea.textContent = 'Failed to read the file.';
+        reader.onerror = (error) => {
+            console.error(error);
+            showStatus('Error reading the file.', true);
         };
 
-        reader.readAsArrayBuffer(file);
+        reader.readAsBinaryString(file);
+    }
+
+    function showStatus(message, isError) {
+        uploadStatus.textContent = message;
+        uploadStatus.className = 'status-message'; // Reset classes
+        if (isError) {
+            uploadStatus.classList.add('status-error');
+        } else {
+            uploadStatus.classList.add('status-success');
+        }
     }
 });
