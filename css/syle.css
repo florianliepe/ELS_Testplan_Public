@@ -185,3 +185,19 @@ tbody tr:hover {
     background-color: #2980b9;
     border-radius: 5px;
 }
+.card-open .card-value { color: #e74c3c; }
+.card-resolved .card-value { color: #2ecc71; }
+
+.priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.priority-high { background-color: #e74c3c; }
+.priority-medium { background-color: #f39c12; }
+.priority-low { background-color: #3498db; }
