@@ -5,59 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preparation Tasks Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
     <nav>
+        <div class="nav-logo"><i class="bi bi-clipboard2-data-fill"></i> Test Plan</div>
         <div class="nav-links">
             <a href="dashboard.html">Test Plan</a>
             <a href="prep_tasks.html" class="active">Prep Tasks</a>
             <a href="blockers.html">Blockers</a>
         </div>
-        <button id="clear-data-btn">Upload New File</button>
+        <button id="clear-data-btn" class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> Upload New File</button>
     </nav>
 
     <div class="container">
-        <h1>Preparation Tasks Dashboard</h1>
+        <h1><i class="bi bi-list-check"></i> Preparation Tasks</h1>
 
-        <!-- Summary Cards -->
         <div class="summary-grid">
             <div class="card">
-                <div class="card-title">Total Tasks</div>
-                <div class="card-value" id="total-tasks">0</div>
+                <div class="card-icon"><i class="bi bi-card-checklist"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Total Tasks</p>
+                    <p class="card-value" id="total-tasks">0</p>
+                </div>
             </div>
             <div class="card card-completed">
-                <div class="card-title">Completed</div>
-                <div class="card-value" id="completed-tasks">0</div>
+                <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Completed</p>
+                    <p class="card-value" id="completed-tasks">0</p>
+                </div>
             </div>
             <div class="card card-inprogress">
-                <div class="card-title">In Progress</div>
-                <div class="card-value" id="inprogress-tasks">0</div>
+                <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="card-content">
+                    <p class="card-title">In Progress</p>
+                    <p class="card-value" id="inprogress-tasks">0</p>
+                </div>
             </div>
             <div class="card card-blocked">
-                <div class="card-title">Blocked</div>
-                <div class="card-value" id="blocked-tasks">0</div>
+                <div class="card-icon"><i class="bi bi-x-octagon-fill"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Blocked</p>
+                    <p class="card-value" id="blocked-tasks">0</p>
+                </div>
             </div>
         </div>
 
-        <!-- Chart -->
         <div class="chart-container">
             <h2>Task Status Distribution</h2>
             <canvas id="status-pie-chart"></canvas>
         </div>
 
-        <!-- Filters and Details -->
         <h2>Preparation Task Details</h2>
         <div class="filters">
-            <select id="status-filter">
-                <option value="all">All Statuses</option>
-            </select>
-            <select id="responsible-filter">
-                <option value="all">All People</option>
-            </select>
+            <select id="status-filter"><option value="all">All Statuses</option></select>
+            <select id="responsible-filter"><option value="all">All People</option></select>
             <input type="text" id="search-filter" placeholder="Search by title or description...">
         </div>
 
-        <!-- Detailed Table -->
         <div class="table-container">
             <table>
                 <thead>
@@ -71,16 +77,12 @@
                         <th>Volume</th>
                     </tr>
                 </thead>
-                <tbody id="prep-tasks-table-body">
-                    <!-- Rows will be inserted here by JavaScript -->
-                </tbody>
+                <tbody id="prep-tasks-table-body"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- Chart.js library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Our custom prep tasks script -->
     <script src="js/prep_tasks.js"></script>
 </body>
 </html>
