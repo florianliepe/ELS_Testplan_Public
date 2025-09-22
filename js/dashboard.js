@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
         default: '#95a5a6'
     };
 
+    const exportBtn = document.getElementById('export-excel-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportDataToExcel(); // This function is in export.js
+        });
+    }
+
     // --- ELEMENT REFERENCES ---
     const clearDataBtn = document.getElementById('clear-data-btn');
     const statusPieChartCtx = document.getElementById('status-pie-chart')?.getContext('2d');
