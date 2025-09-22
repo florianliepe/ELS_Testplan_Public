@@ -366,3 +366,26 @@ tbody tr:hover {
         width: 100%;
     }
 }
+.status-message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    display: none; /* Hidden by default */
+}
+
+.status-message:not(:empty) {
+    display: block; /* Show only when it has content */
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+.status-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
