@@ -169,6 +169,7 @@ tbody tr:hover {
 .status-completed { background-color: #2ecc71; }
 .status-blocked { background-color: #e74c3c; }
 .status-overdue { background-color: #c0392b; }
+.status-not_started { background-color: #95a5a6; }
 
 .progress-bar {
     width: 100px;
