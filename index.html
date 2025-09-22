@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELS Testplan - Upload</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Test Plan Excel File</h1>
+        <p>Select the Excel file containing the 'Test Plan', 'Preparation Tasks', and 'Blockers' sheets.</p>
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls">
+        <div id="message-area"></div>
+    </div>
+
+    <!-- Include the SheetJS library from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- Include our custom JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>
