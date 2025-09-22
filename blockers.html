@@ -5,59 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blockers Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
     <nav>
+        <div class="nav-logo"><i class="bi bi-clipboard2-data-fill"></i> Test Plan</div>
         <div class="nav-links">
             <a href="dashboard.html">Test Plan</a>
             <a href="prep_tasks.html">Prep Tasks</a>
             <a href="blockers.html" class="active">Blockers</a>
         </div>
-        <button id="clear-data-btn">Upload New File</button>
+        <button id="clear-data-btn" class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> Upload New File</button>
     </nav>
 
     <div class="container">
-        <h1>Blockers Dashboard</h1>
+        <h1><i class="bi bi-cone-striped"></i> Blockers Dashboard</h1>
 
-        <!-- Summary Cards -->
         <div class="summary-grid">
             <div class="card">
-                <div class="card-title">Total Blockers</div>
-                <div class="card-value" id="total-blockers">0</div>
+                <div class="card-icon"><i class="bi bi-shield-fill-exclamation"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Total Blockers</p>
+                    <p class="card-value" id="total-blockers">0</p>
+                </div>
             </div>
             <div class="card card-open">
-                <div class="card-title">Open</div>
-                <div class="card-value" id="open-blockers">0</div>
+                <div class="card-icon"><i class="bi bi-unlock-fill"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Open</p>
+                    <p class="card-value" id="open-blockers">0</p>
+                </div>
             </div>
             <div class="card card-inprogress">
-                <div class="card-title">In Progress</div>
-                <div class="card-value" id="inprogress-blockers">0</div>
+                <div class="card-icon"><i class="bi bi-tools"></i></div>
+                <div class="card-content">
+                    <p class="card-title">In Progress</p>
+                    <p class="card-value" id="inprogress-blockers">0</p>
+                </div>
             </div>
             <div class="card card-resolved">
-                <div class="card-title">Resolved</div>
-                <div class="card-value" id="resolved-blockers">0</div>
+                <div class="card-icon"><i class="bi bi-patch-check-fill"></i></div>
+                <div class="card-content">
+                    <p class="card-title">Resolved</p>
+                    <p class="card-value" id="resolved-blockers">0</p>
+                </div>
             </div>
         </div>
 
-        <!-- Chart -->
         <div class="chart-container">
             <h2>Blocker Status Distribution</h2>
             <canvas id="status-pie-chart"></canvas>
         </div>
 
-        <!-- Filters and Details -->
         <h2>Blocker Details</h2>
         <div class="filters">
-            <select id="status-filter">
-                <option value="all">All Statuses</option>
-            </select>
-            <select id="priority-filter">
-                <option value="all">All Priorities</option>
-            </select>
+            <select id="status-filter"><option value="all">All Statuses</option></select>
+            <select id="priority-filter"><option value="all">All Priorities</option></select>
             <input type="text" id="search-filter" placeholder="Search by name or description...">
         </div>
 
-        <!-- Detailed Table -->
         <div class="table-container">
             <table>
                 <thead>
@@ -70,16 +76,12 @@
                         <th>Resolution Status</th>
                     </tr>
                 </thead>
-                <tbody id="blockers-table-body">
-                    <!-- Rows will be inserted here by JavaScript -->
-                </tbody>
+                <tbody id="blockers-table-body"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- Chart.js library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Our custom blockers script -->
     <script src="js/blockers.js"></script>
 </body>
 </html>
