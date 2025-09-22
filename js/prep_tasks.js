@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- DATA LOADING AND INITIALIZATION ---
     const prepTasksJSON = sessionStorage.getItem('Preparation Tasks');
     if (!prepTasksJSON) {
-        // If no data, redirect to home page to upload a file
         window.location.href = 'index.html';
         return;
     }
@@ -44,6 +43,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- FUNCTIONS ---
+
+    // *** NEW FUNCTION TO HANDLE EXCEL DATE CONVERSION ***
+    function formatDate(excelDate) {
+        // If the date is empty, a zero, or not provided, return an empty string.
+        if (!excelDate) {
+            return '';
+        }
+        // If the date is a number (Excel's serial date format), convert it.
+        if (typeof excelDate === 'number') {
+            // Formula to convert Excel serial date to a JS Date object.
+            const date = new Date((excelDate - 25569) * 86400 * 1000);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // JS months are 0-indexed
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+        // If it's already a string, return it as is.
+        return excelDate;
+    }
 
     function normalizeStatus(status) {
         return status ? String(status).toLowerCase().replace(/ /g, '_') : 'not_started';
@@ -127,7 +145,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td><span class="status-badge status-${status}">${status.replace(/_/g, ' ')}</span></td>
                 <td><div class="progress-bar"><div class="progress-bar-fill" style="width: ${item.Progress || 0}%;"></div></div> ${item.Progress || 0}%</td>
                 <td>${item.Responsible || ''}</td>
-                <td>${item['Due Date'] || ''}</td>
+                // *** THIS LINE IS NOW FIXED TO USE THE FORMATTING FUNCTION ***
+                <td>${formatDate(item['Due Date'])}</td>
                 <td>${item.Volume || ''}</td>
             `;
             tableBody.appendChild(row);
