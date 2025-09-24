@@ -1,19 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL VARIABLES ---
-    let prepTasksData = []; // Use a global variable to hold the data
-    let prepTaskModal; // Variable to hold the Bootstrap Modal instance
+    let prepTasksData = [];
+    let prepTaskModal;
 
     // --- INITIALIZATION ---
-    // Initialize the Bootstrap modal
+    console.log("Prep Tasks script loaded. Initializing...");
+
     const modalElement = document.getElementById('prepTaskModal');
     if (modalElement) {
-        prepTaskModal = new bootstrap.Modal(modalElement);
+        try {
+            prepTaskModal = new bootstrap.Modal(modalElement);
+        } catch (e) {
+            console.error("Failed to initialize Bootstrap modal.", e);
+            return;
+        }
     }
 
     loadDataAndRender();
 
-    // --- EVENT LISTENERS FOR MODAL AND ACTIONS ---
-    const addTaskBtn = document.getElementById('add-new-task-btn'); // Ensure you have a button with this ID in your HTML
+    // --- EVENT LISTENERS ---
+    const addTaskBtn = document.getElementById('add-new-task-btn');
     if (addTaskBtn) {
         addTaskBtn.addEventListener('click', showModalForAdd);
     }
@@ -25,25 +31,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CORE FUNCTIONS ---
     function loadDataAndRender() {
-        // Load from localStorage, using the correct key for preparation tasks
-        const storedData = localStorage.getItem('Preparation Tasks');
-        prepTasksData = storedData ? JSON.parse(storedData) : [];
-
-        if (prepTasksData.length === 0) {
-            console.warn("No Preparation Tasks data found in localStorage. Dashboard will be empty.");
-            const tableBody = document.getElementById('prep-tasks-table-body'); // Make sure your table body has this ID
+        const storageKey = 'Preparation Tasks';
+        const storedData = localStorage.getItem(storageKey);
+        
+        if (storedData) {
+            prepTasksData = JSON.parse(storedData);
+        } else {
+            console.error(`No data found in localStorage for key "${storageKey}".`);
+            const tableBody = document.getElementById('prep-tasks-table-body');
             if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No data found. Please <a href="index.html">upload a file</a> first.</td></tr>';
+                tableBody.innerHTML = `<tr><td colspan="8" class="text-center"><strong>Error:</strong> Data not found. Ensure the Excel sheet is named exactly "Preparation Tasks" and <a href="index.html">re-upload the file</a>.</td></tr>`;
             }
             return;
         }
+        
         renderDashboard();
     }
 
     function renderDashboard() {
-        // You can add summary cards and charts here if your prep_tasks.html has them
+        console.log("Rendering dashboard with overview...");
+        // --- UPDATED: Call all rendering functions ---
+        populateSummaryCards(prepTasksData);
+        createCharts(prepTasksData);
         populateTable(prepTasksData);
-        // Add filter logic if needed
     }
 
     function saveDataAndReRender() {
@@ -51,13 +61,62 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDashboard();
     }
 
+    // --- NEW: OVERVIEW FUNCTIONS (Copied and adapted from dashboard.js) ---
+
+    function populateSummaryCards(data) {
+        document.getElementById('total-tasks').textContent = data.length;
+        document.getElementById('completed-tasks').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'completed').length;
+        document.getElementById('in-progress-tasks').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'in_progress').length;
+        document.getElementById('blocked-tasks').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'blocked').length;
+    }
+
+    function createCharts(data) {
+        const statusChartCanvas = document.getElementById('prep-status-chart');
+        const progressChartCanvas = document.getElementById('prep-progress-chart');
+        if (!statusChartCanvas || !progressChartCanvas) {
+            console.warn('Chart canvas elements not found.');
+            return;
+        }
+
+        // Destroy existing charts to prevent conflicts on re-render
+        if (window.prepStatusChartInstance) window.prepStatusChartInstance.destroy();
+        if (window.prepProgressChartInstance) window.prepProgressChartInstance.destroy();
+
+        const statusCounts = data.reduce((acc, item) => {
+            const status = (item.Status || 'unknown').toLowerCase();
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+        }, {});
+
+        window.prepStatusChartInstance = new Chart(statusChartCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(statusCounts),
+                datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+        });
+
+        const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
+        window.prepProgressChartInstance = new Chart(progressChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Overall Progress'],
+                datasets: [{ label: 'Progress %', data: [overallProgress], backgroundColor: ['#0d6efd'], borderRadius: 4 }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // --- TABLE AND MODAL FUNCTIONS (Unchanged) ---
+
     function populateTable(data) {
-        const tableBody = document.getElementById('prep-tasks-table-body'); // Make sure your table body has this ID
+        const tableBody = document.getElementById('prep-tasks-table-body');
         if (!tableBody) return;
         tableBody.innerHTML = '';
 
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No tasks match the current filters.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No tasks to display.</td></tr>';
             return;
         }
 
@@ -92,25 +151,17 @@ document.addEventListener('DOMContentLoaded', () => {
             tableBody.innerHTML += row;
         });
 
-        // Add event listeners for the new edit and delete buttons
         document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const index = e.currentTarget.getAttribute('data-index');
-                showModalForEdit(index);
-            });
+            button.addEventListener('click', (e) => showModalForEdit(e.currentTarget.getAttribute('data-index')));
         });
 
         document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const index = e.currentTarget.getAttribute('data-index');
-                handleDelete(index);
-            });
+            button.addEventListener('click', (e) => handleDelete(e.currentTarget.getAttribute('data-index')));
         });
     }
 
-    // --- MODAL AND CRUD FUNCTIONS ---
-
     function showModalForAdd() {
+        if (!prepTaskModal) return;
         document.getElementById('prep-task-form').reset();
         document.getElementById('modal-task-index').value = '';
         document.getElementById('prepTaskModalLabel').textContent = 'Add New Task';
@@ -118,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showModalForEdit(index) {
+        if (!prepTaskModal) return;
         const item = prepTasksData[index];
         if (!item) return;
 
@@ -125,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-task-index').value = index;
         document.getElementById('prepTaskModalLabel').textContent = 'Edit Task';
 
-        // Populate form
         document.getElementById('modal-activity-title').value = item['Activity Title'] || '';
         document.getElementById('modal-task-description').value = item.Description || '';
         document.getElementById('modal-due-date').value = item['Due Date'] || '';
@@ -149,9 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
             'Blocker': document.getElementById('modal-blocker').value,
         };
 
-        if (index === '') { // Add new
+        if (index === '') {
             prepTasksData.push(taskData);
-        } else { // Update existing
+        } else {
             prepTasksData[parseInt(index)] = taskData;
         }
 
