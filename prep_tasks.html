@@ -4,149 +4,133 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preparation Tasks Dashboard</title>
+    <!-- 1. Bootstrap CSS (for styling) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Optional: Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Your custom CSS if you have one -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
-    <nav>
-        <div class="nav-logo"><i class="bi bi-clipboard2-data-fill"></i> Test Plan</div>
-        <div class="nav-links">
-            <a href="dashboard.html">Test Plan</a>
-            <a href="prep_tasks.html" class="active">Prep Tasks</a>
-            <a href="blockers.html">Blockers</a>
+
+    <!-- Navigation Bar (Example) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Test Plan Dashboard</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html">Test Plan</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="prep_tasks.html">Prep Tasks</a></li>
+                </ul>
+            </div>
         </div>
-        <button id="clear-data-btn" class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> Upload New File</button>
     </nav>
 
-    <div class="container">
-        <h1><i class="bi bi-list-check"></i> Preparation Tasks</h1>
-
-        <div class="summary-grid">
-            <div class="card">
-                <div class="card-icon"><i class="bi bi-card-checklist"></i></div>
-                <div class="card-content">
-                    <p class="card-title">Total Tasks</p>
-                    <p class="card-value" id="total-tasks">0</p>
-                </div>
-            </div>
-            <div class="card card-completed">
-                <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
-                <div class="card-content">
-                    <p class="card-title">Completed</p>
-                    <p class="card-value" id="completed-tasks">0</p>
-                </div>
-            </div>
-            <div class="card card-inprogress">
-                <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
-                <div class="card-content">
-                    <p class="card-title">In Progress</p>
-                    <p class="card-value" id="inprogress-tasks">0</p>
-                </div>
-            </div>
-            <div class="card card-blocked">
-                <div class="card-icon"><i class="bi bi-x-octagon-fill"></i></div>
-                <div class="card-content">
-                    <p class="card-title">Blocked</p>
-                    <p class="card-value" id="blocked-tasks">0</p>
-                </div>
-            </div>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Preparation Tasks</h1>
+            <!-- This is the button to add a new task -->
+            <button id="add-new-task-btn" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Task
+            </button>
         </div>
 
-        <div class="chart-container">
-            <h2>Task Status Distribution</h2>
-            <canvas id="status-pie-chart"></canvas>
-        </div>
-
-        <h2>Preparation Task Details</h2>
-        <div class="filters">
-            <select id="status-filter"><option value="all">All Statuses</option></select>
-            <select id="responsible-filter"><option value="all">All People</option></select>
-            <input type="text" id="search-filter" placeholder="Search by title or description...">
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Activity Title</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                        <th>Responsible</th>
-                        <th>Due Date</th>
-                        <th>Volume</th>
-                    </tr>
-                </thead>
-                <tbody id="prep-tasks-table-body"></tbody>
-            </table>
+        <!-- The table where data will be displayed -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Activity Title</th>
+                                <th>Description</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Responsible</th>
+                                <th>Blocker</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <!-- The JavaScript targets this EXACT ID -->
+                        <tbody id="prep-tasks-table-body">
+                            <!-- Data will be loaded here by prep_tasks.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- THIS IS THE FIX: It now correctly loads prep_tasks.js -->
+    <!-- Preparation Task Modal for Add/Edit -->
+    <!-- This is the hidden pop-up form -->
+    <div class="modal fade" id="prepTaskModal" tabindex="-1" aria-labelledby="prepTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="prepTaskModalLabel">Add/Edit Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="prep-task-form">
+                        <input type="hidden" id="modal-task-index">
+                        <div class="mb-3">
+                            <label for="modal-activity-title" class="form-label">Activity Title</label>
+                            <input type="text" class="form-control" id="modal-activity-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modal-task-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="modal-task-description" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="modal-due-date" class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="modal-due-date">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="modal-status" class="form-label">Status</label>
+                                <select class="form-select" id="modal-status">
+                                    <option value="not_started">Not Started</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="overdue">Overdue</option>
+                                    <option value="blocked">Blocked</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="modal-progress" class="form-label">Progress (%)</label>
+                                <input type="number" class="form-control" id="modal-progress" min="0" max="100">
+                            </div>
+                             <div class="col-md-6 mb-3">
+                                <label for="modal-responsible" class="form-label">Responsible</label>
+                                <input type="text" class="form-control" id="modal-responsible">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modal-blocker" class="form-label">Blocker</label>
+                            <input type="text" class="form-control" id="modal-blocker">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="save-prep-task-btn">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- SCRIPT LOADING SECTION - THE ORDER HERE IS CRITICAL FOR THE FIX -->
+    <!-- =================================================================== -->
+
+    <!-- 1. Bootstrap JS Bundle (provides the 'bootstrap' object) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 2. Your custom script (which USES the 'bootstrap' object) -->
     <script src="js/prep_tasks.js"></script>
 
-<!-- Add this right before the </body> tag -->
-
-<!-- Preparation Task Modal for Add/Edit -->
-<div class="modal fade" id="prepTaskModal" tabindex="-1" aria-labelledby="prepTaskModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="prepTaskModalLabel">Add/Edit Task</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="prep-task-form">
-                    <!-- Hidden input to store the index of the item being edited -->
-                    <input type="hidden" id="modal-task-index">
-                    
-                    <div class="mb-3">
-                        <label for="modal-activity-title" class="form-label">Activity Title</label>
-                        <input type="text" class="form-control" id="modal-activity-title" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="modal-task-description" class="form-label">Description</label>
-                        <textarea class="form-control" id="modal-task-description" rows="3"></textarea>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="modal-due-date" class="form-label">Due Date</label>
-                            <input type="date" class="form-control" id="modal-due-date">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="modal-status" class="form-label">Status</label>
-                            <select class="form-select" id="modal-status">
-                                <option value="not_started">Not Started</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                                <option value="overdue">Overdue</option>
-                                <option value="blocked">Blocked</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="modal-progress" class="form-label">Progress (%)</label>
-                            <input type="number" class="form-control" id="modal-progress" min="0" max="100">
-                        </div>
-                         <div class="col-md-6 mb-3">
-                            <label for="modal-responsible" class="form-label">Responsible</label>
-                            <input type="text" class="form-control" id="modal-responsible">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="modal-blocker" class="form-label">Blocker</label>
-                        <input type="text" class="form-control" id="modal-blocker">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="save-prep-task-btn">Save changes</button>
-            </div>
-        </div>
-    </div>
-</div>
 </body>
 </html>
