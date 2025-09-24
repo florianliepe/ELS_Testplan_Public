@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 requiredSheets.forEach(sheetName => {
                     if (workbook.Sheets[sheetName]) {
                         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                        sessionStorage.setItem(sheetName, JSON.stringify(jsonData));
+                        localStorage.setItem(sheetName, JSON.stringify(jsonData));
                         console.log(`Successfully processed and stored "${sheetName}".`);
                     } else {
                         showStatus(`Error: Required sheet "${sheetName}" was not found in the Excel file.`, true);
