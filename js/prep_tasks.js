@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GLOBAL VARIABLES ---
     let prepTasksData = [];
     let prepTaskModal;
+    // --- MODIFIED: Chart instances are now stored globally and initialized to null ---
+    let prepStatusChartInstance = null;
+    let prepProgressChartInstance = null;
 
     // --- INITIALIZATION ---
     console.log("Prep Tasks script loaded. Initializing...");
@@ -49,10 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDashboard() {
-        console.log("Rendering dashboard with overview...");
-        // --- UPDATED: Call all rendering functions ---
+        // This console log should now only appear once on load, and once per save/delete.
+        console.log("Rendering dashboard...");
         populateSummaryCards(prepTasksData);
-        createCharts(prepTasksData);
+        updateCharts(prepTasksData); // Call the updated chart function
         populateTable(prepTasksData);
     }
 
@@ -61,7 +64,58 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDashboard();
     }
 
-    // --- NEW: OVERVIEW FUNCTIONS (Copied and adapted from dashboard.js) ---
+    // --- REWRITTEN: This function now creates charts once, then updates them ---
+    function updateCharts(data) {
+        const statusChartCanvas = document.getElementById('prep-status-chart');
+        const progressChartCanvas = document.getElementById('prep-progress-chart');
+        if (!statusChartCanvas || !progressChartCanvas) {
+            console.warn('Chart canvas elements not found.');
+            return;
+        }
+
+        // Calculate new data
+        const statusCounts = data.reduce((acc, item) => {
+            const status = (item.Status || 'unknown').toLowerCase();
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+        }, {});
+        const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
+
+        // --- Status Chart Logic ---
+        if (prepStatusChartInstance) {
+            // If chart exists, just update its data
+            prepStatusChartInstance.data.labels = Object.keys(statusCounts);
+            prepStatusChartInstance.data.datasets[0].data = Object.values(statusCounts);
+            prepStatusChartInstance.update();
+        } else {
+            // If chart doesn't exist, create it for the first time
+            prepStatusChartInstance = new Chart(statusChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d', '#fd7e14'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        }
+
+        // --- Progress Chart Logic ---
+        if (prepProgressChartInstance) {
+            // If chart exists, update its data
+            prepProgressChartInstance.data.datasets[0].data = [overallProgress];
+            prepProgressChartInstance.update();
+        } else {
+            // If chart doesn't exist, create it
+            prepProgressChartInstance = new Chart(progressChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: ['Overall Progress'],
+                    datasets: [{ label: 'Progress %', data: [overallProgress], backgroundColor: ['#0d6efd'], borderRadius: 4 }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+            });
+        }
+    }
 
     function populateSummaryCards(data) {
         document.getElementById('total-tasks').textContent = data.length;
@@ -70,46 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('blocked-tasks').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'blocked').length;
     }
 
-    function createCharts(data) {
-        const statusChartCanvas = document.getElementById('prep-status-chart');
-        const progressChartCanvas = document.getElementById('prep-progress-chart');
-        if (!statusChartCanvas || !progressChartCanvas) {
-            console.warn('Chart canvas elements not found.');
-            return;
-        }
-
-        // Destroy existing charts to prevent conflicts on re-render
-        if (window.prepStatusChartInstance) window.prepStatusChartInstance.destroy();
-        if (window.prepProgressChartInstance) window.prepProgressChartInstance.destroy();
-
-        const statusCounts = data.reduce((acc, item) => {
-            const status = (item.Status || 'unknown').toLowerCase();
-            acc[status] = (acc[status] || 0) + 1;
-            return acc;
-        }, {});
-
-        window.prepStatusChartInstance = new Chart(statusChartCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(statusCounts),
-                datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
-        });
-
-        const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
-        window.prepProgressChartInstance = new Chart(progressChartCanvas, {
-            type: 'bar',
-            data: {
-                labels: ['Overall Progress'],
-                datasets: [{ label: 'Progress %', data: [overallProgress], backgroundColor: ['#0d6efd'], borderRadius: 4 }]
-            },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
-        });
-    }
-
     // --- TABLE AND MODAL FUNCTIONS (Unchanged) ---
-
     function populateTable(data) {
         const tableBody = document.getElementById('prep-tasks-table-body');
         if (!tableBody) return;
