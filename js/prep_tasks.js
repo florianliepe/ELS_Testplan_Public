@@ -1,193 +1,267 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // --- CONFIGURATION ---
-    const STATUS_COLORS = {
-        not_started: '#95a5a6',
-        in_progress: '#f1c40f',
-        completed: '#2ecc71',
-        blocked: '#e74c3c',
-        overdue: '#c0392b',
-        default: '#bdc3c7'
-    };
+document.addEventListener('DOMContentLoaded', () => {
+    // --- GLOBAL VARIABLES ---
+    let testPlanData = []; // Use a global variable to hold the data
+    let testPlanModal; // Variable to hold the Bootstrap Modal instance
 
-    // --- ELEMENT REFERENCES ---
-    const clearDataBtn = document.getElementById('clear-data-btn');
-    const statusPieChartCtx = document.getElementById('status-pie-chart')?.getContext('2d');
-    const tableBody = document.getElementById('prep-tasks-table-body');
-    const statusFilter = document.getElementById('status-filter');
-    const responsibleFilter = document.getElementById('responsible-filter');
-    const searchFilter = document.getElementById('search-filter');
-
-    // --- DATA LOADING AND INITIALIZATION ---
-    const prepTasksJSON = sessionStorage.getItem('Preparation Tasks');
-    if (!prepTasksJSON) {
-        window.location.href = 'index.html';
-        return;
-    }
-    const allPrepTasks = JSON.parse(prepTasksJSON);
-
-    // --- MAIN EXECUTION ---
-    populateFilters(allPrepTasks);
-    renderPage(allPrepTasks);
-
-    // --- EVENT LISTENERS ---
-    clearDataBtn.addEventListener('click', () => {
-        sessionStorage.clear();
-        window.location.href = 'index.html';
-    });
-
-    [statusFilter, responsibleFilter, searchFilter].forEach(filter => {
-        filter.addEventListener('input', () => {
-            const filteredData = applyFilters(allPrepTasks);
-            renderTable(filteredData);
-        });
-    });
-
-    // --- FUNCTIONS ---
-
-    // *** NEW FUNCTION TO HANDLE EXCEL DATE CONVERSION ***
-    function formatDate(excelDate) {
-        // If the date is empty, a zero, or not provided, return an empty string.
-        if (!excelDate) {
-            return '';
-        }
-        // If the date is a number (Excel's serial date format), convert it.
-        if (typeof excelDate === 'number') {
-            // Formula to convert Excel serial date to a JS Date object.
-            const date = new Date((excelDate - 25569) * 86400 * 1000);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0'); // JS months are 0-indexed
-            const year = date.getFullYear();
-            return `${day}.${month}.${year}`;
-        }
-        // If it's already a string, return it as is.
-        return excelDate;
+    // --- INITIALIZATION ---
+    // Initialize the Bootstrap modal
+    const modalElement = document.getElementById('testPlanModal');
+    if (modalElement) {
+        testPlanModal = new bootstrap.Modal(modalElement);
     }
 
-    function normalizeStatus(status) {
-        return status ? String(status).toLowerCase().replace(/ /g, '_') : 'not_started';
+    loadDataAndRender();
+
+    // --- NEW: EVENT LISTENERS FOR MODAL AND ACTIONS ---
+    const addTestBtn = document.getElementById('add-test-btn');
+    if (addTestBtn) {
+        addTestBtn.addEventListener('click', showModalForAdd);
     }
 
-    function renderPage(data) {
-        renderSummary(data);
-        renderPieChart(data);
-        renderTable(data);
+    const saveBtn = document.getElementById('save-test-plan-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', handleFormSave);
     }
 
-    function renderSummary(data) {
-        const statusCounts = data.reduce((acc, item) => {
-            const status = normalizeStatus(item.Status);
-            acc[status] = (acc[status] || 0) + 1;
-            return acc;
-        }, {});
+    // --- CORE FUNCTIONS ---
+    function loadDataAndRender() {
+        // Load from localStorage instead of sessionStorage
+        const storedData = localStorage.getItem('Test Plan');
+        testPlanData = storedData ? JSON.parse(storedData) : [];
 
-        document.getElementById('total-tasks').textContent = data.length;
-        document.getElementById('completed-tasks').textContent = statusCounts.completed || 0;
-        document.getElementById('inprogress-tasks').textContent = statusCounts.in_progress || 0;
-        document.getElementById('blocked-tasks').textContent = statusCounts.blocked || 0;
-    }
-
-    function renderPieChart(data) {
-        if (!statusPieChartCtx) return;
-
-        const statusCounts = data.reduce((acc, item) => {
-            const status = normalizeStatus(item.Status);
-            acc[status] = (acc[status] || 0) + 1;
-            return acc;
-        }, {});
-
-        const labels = Object.keys(statusCounts);
-        const chartData = Object.values(statusCounts);
-        const backgroundColors = labels.map(label => STATUS_COLORS[label] || STATUS_COLORS.default);
-
-        if (window.myStatusChart) {
-            window.myStatusChart.destroy();
-        }
-
-        window.myStatusChart = new Chart(statusPieChartCtx, {
-            type: 'doughnut',
-            data: {
-                labels: labels.map(l => l.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())),
-                datasets: [{
-                    label: 'Task Status',
-                    data: chartData,
-                    backgroundColor: backgroundColors,
-                    borderColor: '#ffffff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
-                }
+        if (testPlanData.length === 0) {
+            console.warn("No test plan data found in localStorage. Dashboard will be empty.");
+            const tableBody = document.getElementById('test-plan-table-body');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No data found. Please <a href="index.html">upload a file</a> first.</td></tr>';
             }
-        });
+            return;
+        }
+        renderDashboard();
     }
 
-    function renderTable(data) {
+    function renderDashboard() {
+        populateSummaryCards(testPlanData);
+        createCharts(testPlanData);
+        populateTable(testPlanData);
+        populateFilterDropdowns(testPlanData);
+        addFilterEventListeners();
+    }
+
+    function saveDataAndReRender() {
+        localStorage.setItem('Test Plan', JSON.stringify(testPlanData));
+        renderDashboard();
+    }
+
+    function populateTable(data) {
+        const tableBody = document.getElementById('test-plan-table-body');
         if (!tableBody) return;
         tableBody.innerHTML = '';
 
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">No matching tasks found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No tests match the current filters.</td></tr>';
             return;
         }
 
-        data.forEach(item => {
-            const status = normalizeStatus(item.Status);
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item['Activity Title'] || ''}</td>
-                <td>${item.Description || ''}</td>
-                <td><span class="status-badge status-${status}">${status.replace(/_/g, ' ')}</span></td>
-                <td><div class="progress-bar"><div class="progress-bar-fill" style="width: ${item.Progress || 0}%;"></div></div> ${item.Progress || 0}%</td>
-                <td>${item.Responsible || ''}</td>
-                // *** THIS LINE IS NOW FIXED TO USE THE FORMATTING FUNCTION ***
-                <td>${formatDate(item['Due Date'])}</td>
-                <td>${item.Volume || ''}</td>
-            `;
-            tableBody.appendChild(row);
+        data.forEach((item, index) => {
+            const progress = Number(item.Progress) || 0;
+            const status = (item.Status || '').toLowerCase();
+            let statusBadge = '';
+            switch (status) {
+                case 'completed': statusBadge = 'bg-success'; break;
+                case 'in_progress': statusBadge = 'bg-primary'; break;
+                case 'overdue': statusBadge = 'bg-warning text-dark'; break;
+                case 'blocked': statusBadge = 'bg-danger'; break;
+                default: statusBadge = 'bg-secondary';
+            }
+            // NEW: Added data-index attribute to buttons
+            const row = `
+                <tr>
+                    <td>${item.Test || ''}</td>
+                    <td>${item.Description || ''}</td>
+                    <td>${item['Start Date'] || ''}</td>
+                    <td>${item['Due Date'] || ''}</td>
+                    <td><span class="badge ${statusBadge}">${item.Status || 'N/A'}</span></td>
+                    <td>
+                        <div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}">${progress}%</div></div>
+                    </td>
+                    <td>${item.Responsible || ''}</td>
+                    <td>${item.Location || ''}</td>
+                    <td>${item.Blocker || 'None'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary edit-btn" data-index="${index}"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`;
+            tableBody.innerHTML += row;
+        });
+
+        // NEW: Add event listeners for the new edit and delete buttons
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = e.currentTarget.getAttribute('data-index');
+                showModalForEdit(index);
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = e.currentTarget.getAttribute('data-index');
+                handleDelete(index);
+            });
         });
     }
 
-    function populateFilters(data) {
-        const statuses = [...new Set(data.map(item => normalizeStatus(item.Status)))];
-        const responsibles = [...new Set(data.map(item => item.Responsible).filter(Boolean))];
+    // --- NEW: MODAL AND CRUD FUNCTIONS ---
 
-        statuses.forEach(status => {
-            const option = document.createElement('option');
-            option.value = status;
-            option.textContent = status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-            statusFilter.appendChild(option);
+    function showModalForAdd() {
+        document.getElementById('test-plan-form').reset();
+        document.getElementById('modal-test-index').value = ''; // Ensure index is empty for adds
+        document.getElementById('testPlanModalLabel').textContent = 'Add New Test';
+        testPlanModal.show();
+    }
+
+    function showModalForEdit(index) {
+        const item = testPlanData[index];
+        if (!item) return;
+
+        document.getElementById('test-plan-form').reset();
+        document.getElementById('modal-test-index').value = index;
+        document.getElementById('testPlanModalLabel').textContent = 'Edit Test';
+
+        // Populate form
+        document.getElementById('modal-test-name').value = item.Test || '';
+        document.getElementById('modal-test-description').value = item.Description || '';
+        document.getElementById('modal-start-date').value = item['Start Date'] || '';
+        document.getElementById('modal-due-date').value = item['Due Date'] || '';
+        document.getElementById('modal-status').value = (item.Status || '').toLowerCase();
+        document.getElementById('modal-progress').value = item.Progress || 0;
+        document.getElementById('modal-responsible').value = item.Responsible || '';
+        document.getElementById('modal-location').value = item.Location || '';
+        document.getElementById('modal-blocker').value = item.Blocker || '';
+
+        testPlanModal.show();
+    }
+
+    function handleFormSave() {
+        const index = document.getElementById('modal-test-index').value;
+        const testData = {
+            'Test': document.getElementById('modal-test-name').value,
+            'Description': document.getElementById('modal-test-description').value,
+            'Start Date': document.getElementById('modal-start-date').value,
+            'Due Date': document.getElementById('modal-due-date').value,
+            'Status': document.getElementById('modal-status').value,
+            'Progress': document.getElementById('modal-progress').value,
+            'Responsible': document.getElementById('modal-responsible').value,
+            'Location': document.getElementById('modal-location').value,
+            'Blocker': document.getElementById('modal-blocker').value,
+        };
+
+        if (index === '') { // Add new
+            testPlanData.push(testData);
+        } else { // Update existing
+            testPlanData[parseInt(index)] = testData;
+        }
+
+        saveDataAndReRender();
+        testPlanModal.hide();
+    }
+
+    function handleDelete(index) {
+        const item = testPlanData[index];
+        // Best Practice: Confirmation dialog
+        if (confirm(`Are you sure you want to delete the test "${item.Test}"?`)) {
+            testPlanData.splice(index, 1); // Remove the item from the array
+            saveDataAndReRender();
+        }
+    }
+
+    // --- UNCHANGED HELPER FUNCTIONS (populateSummaryCards, createCharts, etc.) ---
+    // These functions remain the same as before, so I've included them for completeness.
+
+    function populateSummaryCards(data) {
+        document.getElementById('total-tests').textContent = data.length;
+        document.getElementById('completed-tests').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'completed').length;
+        document.getElementById('in-progress-tests').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'in_progress').length;
+        document.getElementById('blocked-tests').textContent = data.filter(item => item.Status && item.Status.toLowerCase() === 'blocked').length;
+    }
+
+    function createCharts(data) {
+        const statusChartCanvas = document.getElementById('status-chart');
+        const progressChartCanvas = document.getElementById('progress-chart');
+        if (!statusChartCanvas || !progressChartCanvas) return;
+
+        // Destroy existing charts if they exist to prevent conflicts
+        if (window.statusChartInstance) window.statusChartInstance.destroy();
+        if (window.progressChartInstance) window.progressChartInstance.destroy();
+
+        const statusCounts = data.reduce((acc, item) => {
+            const status = (item.Status || 'unknown').toLowerCase();
+            acc[status] = (acc[status] || 0) + 1;
+            return acc;
+        }, {});
+
+        window.statusChartInstance = new Chart(statusChartCanvas, {
+            type: 'doughnut',
+            data: { labels: Object.keys(statusCounts), datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d'] }] },
+            options: { responsive: true, plugins: { legend: { position: 'top' } } }
         });
 
-        responsibles.sort().forEach(person => {
-            const option = document.createElement('option');
-            option.value = person;
-            option.textContent = person;
-            responsibleFilter.appendChild(option);
+        const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
+        window.progressChartInstance = new Chart(progressChartCanvas, {
+            type: 'bar',
+            data: { labels: ['Overall Progress'], datasets: [{ label: 'Progress %', data: [overallProgress], backgroundColor: ['#0d6efd'], borderRadius: 4 }] },
+            options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
         });
     }
 
-    function applyFilters(data) {
-        const status = statusFilter.value;
-        const responsible = responsibleFilter.value;
-        const searchTerm = searchFilter.value.toLowerCase();
+    function populateFilterDropdowns(data) {
+        const addOptions = (elementId, values) => {
+            const selectElement = document.getElementById(elementId);
+            if (selectElement) {
+                // Clear existing options except the first one ("All...")
+                while (selectElement.options.length > 1) {
+                    selectElement.remove(1);
+                }
+                values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    selectElement.appendChild(option);
+                });
+            }
+        };
+        addOptions('filter-status', [...new Set(data.map(item => item.Status).filter(Boolean))]);
+        addOptions('filter-responsible', [...new Set(data.map(item => item.Responsible).filter(Boolean))]);
+        addOptions('filter-location', [...new Set(data.map(item => item.Location).filter(Boolean))]);
+    }
+    
+    function applyFilters() {
+        const statusFilter = document.getElementById('filter-status').value.toLowerCase();
+        const responsibleFilter = document.getElementById('filter-responsible').value.toLowerCase();
+        const locationFilter = document.getElementById('filter-location').value.toLowerCase();
+        const searchFilter = document.getElementById('search-tests').value.toLowerCase();
 
-        return data.filter(item => {
-            const itemStatus = normalizeStatus(item.Status);
-            const itemResponsible = item.Responsible || '';
-            const itemTitle = (item['Activity Title'] || '').toLowerCase();
-            const itemDesc = (item.Description || '').toLowerCase();
-
-            const statusMatch = status === 'all' || itemStatus === status;
-            const responsibleMatch = responsible === 'all' || itemResponsible === responsible;
-            const searchMatch = searchTerm === '' || itemTitle.includes(searchTerm) || itemDesc.includes(searchTerm);
-
-            return statusMatch && responsibleMatch && searchMatch;
+        const filteredData = testPlanData.filter(item => {
+            return (statusFilter === '' || (item.Status || '').toLowerCase() === statusFilter) &&
+                   (responsibleFilter === '' || (item.Responsible || '').toLowerCase() === responsibleFilter) &&
+                   (locationFilter === '' || (item.Location || '').toLowerCase() === locationFilter) &&
+                   (searchFilter === '' || (item.Test || '').toLowerCase().includes(searchFilter) || (item.Description || '').toLowerCase().includes(searchFilter));
         });
+        populateTable(filteredData);
+    }
+
+    function addFilterEventListeners() {
+        const addListener = (elementId, eventType, handler) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.removeEventListener(eventType, handler); // Prevent duplicate listeners
+                element.addEventListener(eventType, handler);
+            }
+        };
+        addListener('filter-status', 'change', applyFilters);
+        addListener('filter-responsible', 'change', applyFilters);
+        addListener('filter-location', 'change', applyFilters);
+        addListener('search-tests', 'input', applyFilters);
     }
 });
