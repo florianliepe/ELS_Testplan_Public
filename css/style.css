@@ -252,6 +252,9 @@ nav {
     box-shadow: var(--shadow);
     margin-bottom: 2.5rem;
     height: 400px;
+    position: relative;
+    height: 350px;
+    width: 100%;
 }
 
 /* 7. Filters */
