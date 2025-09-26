@@ -141,8 +141,25 @@
                     case 'blocked': statusClass = 'text-danger'; break;
                     default: statusClass = 'text-secondary';
                 }
+
+                // ========================================================
+                // NEW: LOGIC TO DETERMINE PROGRESS BAR COLOR
+                // ========================================================
+                let progressColorClass = '';
+                if (progress <= 30) {
+                    progressColorClass = 'bg-warning'; // Orange
+                } else if (progress <= 60) {
+                    progressColorClass = 'bg-info'; // Yellow (using Bootstrap's light blue for contrast)
+                } else if (progress < 100) {
+                    progressColorClass = 'bg-success-light'; // Light Green (custom class)
+                } else {
+                    progressColorClass = 'bg-success'; // Dark Green for 100%
+                }
                 
-                const row = `<tr><td>${item['Activity Title'] || ''}</td><td>${item.Description || ''}</td><td>${item['Due Date'] || ''}</td><td class="${statusClass}"><strong>${item.Status || 'N/A'}</strong></td><td><div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}">${progress}%</div></div></td><td>${item.Responsible || ''}</td><td>${item.Blocker || 'None'}</td><td><button class="btn btn-sm btn-outline-primary edit-btn" data-index="${index}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash"></i></button></td></tr>`;
+                // ========================================================
+                // UPDATED: The progress bar div now includes the dynamic color class
+                // ========================================================
+                const row = `<tr><td>${item['Activity Title'] || ''}</td><td>${item.Description || ''}</td><td>${item['Due Date'] || ''}</td><td class="${statusClass}"><strong>${item.Status || 'N/A'}</strong></td><td><div class="progress" style="height: 20px;"><div class="progress-bar ${progressColorClass}" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}">${progress}%</div></div></td><td>${item.Responsible || ''}</td><td>${item.Blocker || 'None'}</td><td><button class="btn btn-sm btn-outline-primary edit-btn" data-index="${index}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash"></i></button></td></tr>`;
                 tableBody.innerHTML += row;
             });
 
