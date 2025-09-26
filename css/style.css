@@ -252,9 +252,6 @@ nav {
     box-shadow: var(--shadow);
     margin-bottom: 2.5rem;
     height: 400px;
-    position: relative;
-    height: 350px;
-    width: 100%;
 }
 
 /* 7. Filters */
@@ -391,4 +388,11 @@ tbody tr:hover {
     background-color: #d1e7dd;
     color: #0f5132;
     border: 1px solid #badbcc;
+}
+
+/* ================================================= */
+/* NEW CLASS FOR LIGHT GREEN PROGRESS BAR            */
+/* ================================================= */
+.bg-success-light {
+    background-color: #63c78a !important;
 }
