@@ -1,24 +1,17 @@
 (function() {
     'use strict';
 
-    // Check for dependencies
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded. The page will not function correctly.');
-        return;
-    }
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js is not loaded. Charts will not be displayed.');
+    if (typeof bootstrap === 'undefined' || typeof Chart === 'undefined') {
+        console.error('Dependencies (Bootstrap or Chart.js) are not loaded.');
         return;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- VARIABLES WITHIN SCOPE ---
         let prepTasksData = [];
         let prepTaskModal;
         let prepStatusChartInstance = null;
         let prepProgressChartInstance = null;
 
-        // --- INITIALIZATION ---
         console.log("Prep Tasks script loaded. Initializing...");
 
         const modalElement = document.getElementById('prepTaskModal');
@@ -28,34 +21,12 @@
 
         loadDataAndRender();
 
-        // --- EVENT LISTENERS ---
-        const addTaskBtn = document.getElementById('add-new-task-btn');
-        if (addTaskBtn) {
-            addTaskBtn.addEventListener('click', showModalForAdd);
-        }
+        document.getElementById('add-new-task-btn')?.addEventListener('click', showModalForAdd);
+        document.getElementById('save-prep-task-btn')?.addEventListener('click', handleFormSave);
 
-        const saveBtn = document.getElementById('save-prep-task-btn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', handleFormSave);
-        }
-
-        // --- CORE FUNCTIONS ---
         function loadDataAndRender() {
-            const storageKey = 'Preparation Tasks';
-            const storedData = localStorage.getItem(storageKey);
-            
-            if (storedData) {
-                try {
-                    prepTasksData = JSON.parse(storedData);
-                } catch (e) {
-                    console.error("Failed to parse data from localStorage.", e);
-                    prepTasksData = [];
-                }
-            } else {
-                console.warn(`No data found in localStorage for key "${storageKey}".`);
-                prepTasksData = [];
-            }
-            
+            const storedData = localStorage.getItem('Preparation Tasks');
+            prepTasksData = storedData ? JSON.parse(storedData) : [];
             renderDashboard();
         }
 
@@ -81,7 +52,6 @@
                 acc[status] = (acc[status] || 0) + 1;
                 return acc;
             }, {});
-            const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
 
             if (prepStatusChartInstance) {
                 prepStatusChartInstance.data.labels = Object.keys(statusCounts);
@@ -92,11 +62,13 @@
                     type: 'doughnut',
                     data: {
                         labels: Object.keys(statusCounts),
-                        datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6c757d', '#fd7e14'] }]
+                        datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#198754', '#dc3545', '#ffc107', '#6c757d', '#0d6efd'] }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+                    options: { responsive: true, maintainAspectRatio: false }
                 });
             }
+            
+            const overallProgress = data.length > 0 ? data.reduce((sum, item) => sum + (Number(item.Progress) || 0), 0) / data.length : 0;
 
             if (prepProgressChartInstance) {
                 prepProgressChartInstance.data.datasets[0].data = [overallProgress];
@@ -133,34 +105,37 @@
             data.forEach((item, index) => {
                 const progress = Number(item.Progress) || 0;
                 const status = (item.Status || '').toLowerCase();
-                let statusClass = '';
-                switch (status) {
-                    case 'completed': statusClass = 'text-success'; break;
-                    case 'in_progress': statusClass = 'text-primary'; break;
-                    case 'overdue': statusClass = 'text-warning'; break;
-                    case 'blocked': statusClass = 'text-danger'; break;
-                    default: statusClass = 'text-secondary';
-                }
-
-                // ========================================================
-                // NEW: LOGIC TO DETERMINE PROGRESS BAR COLOR
-                // ========================================================
+                let statusClass = { 'completed': 'text-success', 'in_progress': 'text-primary', 'overdue': 'text-warning', 'blocked': 'text-danger' }[status] || 'text-secondary';
+                
                 let progressColorClass = '';
                 if (progress <= 30) {
-                    progressColorClass = 'bg-warning'; // Orange
+                    progressColorClass = 'bg-warning'; // Orange for 0-30%
                 } else if (progress <= 60) {
-                    progressColorClass = 'bg-info'; // Yellow (using Bootstrap's light blue for contrast)
+                    progressColorClass = 'bg-info'; // Blueish/Yellow for 31-60%
                 } else if (progress < 100) {
-                    progressColorClass = 'bg-success-light'; // Light Green (custom class)
+                    progressColorClass = 'bg-success-light'; // Light Green for 61-99%
                 } else {
                     progressColorClass = 'bg-success'; // Dark Green for 100%
                 }
                 
-                // ========================================================
-                // UPDATED: The progress bar div now includes the dynamic color class
-                // ========================================================
-                const row = `<tr><td>${item['Activity Title'] || ''}</td><td>${item.Description || ''}</td><td>${item['Due Date'] || ''}</td><td class="${statusClass}"><strong>${item.Status || 'N/A'}</strong></td><td><div class="progress" style="height: 20px;"><div class="progress-bar ${progressColorClass}" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}">${progress}%</div></div></td><td>${item.Responsible || ''}</td><td>${item.Blocker || 'None'}</td><td><button class="btn btn-sm btn-outline-primary edit-btn" data-index="${index}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash"></i></button></td></tr>`;
-                tableBody.innerHTML += row;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item['Activity Title'] || ''}</td>
+                    <td>${item.Description || ''}</td>
+                    <td>${item['Due Date'] || ''}</td>
+                    <td class="${statusClass}"><strong>${item.Status || 'N/A'}</strong></td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${progressColorClass}" role="progressbar" style="width: ${progress}%;" aria-valuenow="${progress}">${progress}%</div>
+                        </div>
+                    </td>
+                    <td>${item.Responsible || ''}</td>
+                    <td>${item.Blocker || 'None'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary edit-btn" data-index="${index}"><i class="bi bi-pencil"></i></button> 
+                        <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${index}"><i class="bi bi-trash"></i></button>
+                    </td>`;
+                tableBody.appendChild(row);
             });
 
             tableBody.querySelectorAll('.edit-btn').forEach(button => button.addEventListener('click', (e) => showModalForEdit(e.currentTarget.dataset.index)));
@@ -168,19 +143,21 @@
         }
 
         function showModalForAdd() {
-            if (!prepTaskModal) return;
-            document.getElementById('prep-task-form').reset();
+            const form = document.getElementById('prep-task-form');
+            if (!form || !prepTaskModal) return;
+            form.reset();
             document.getElementById('modal-task-index').value = '';
             document.getElementById('prepTaskModalLabel').textContent = 'Add New Task';
             prepTaskModal.show();
         }
 
         function showModalForEdit(index) {
-            if (!prepTaskModal) return;
+            const form = document.getElementById('prep-task-form');
+            if (!form || !prepTaskModal) return;
             const item = prepTasksData[index];
             if (!item) return;
 
-            document.getElementById('prep-task-form').reset();
+            form.reset();
             document.getElementById('modal-task-index').value = index;
             document.getElementById('prepTaskModalLabel').textContent = 'Edit Task';
             document.getElementById('modal-activity-title').value = item['Activity Title'] || '';
