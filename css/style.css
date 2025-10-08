@@ -405,3 +405,79 @@ tbody tr:hover {
 .bg-progress-orange {
     background-color: #fd7e14 !important;
 }
+/* ================================================= */
+/* 11. GANTT CHART STYLES                            */
+/* ================================================= */
+
+/* Default bar styles */
+.gantt .bar-wrapper {
+    transition: filter 0.2s;
+}
+
+.gantt .bar-wrapper:hover {
+    filter: brightness(1.2);
+}
+
+/* Status-based coloring for Gantt bars */
+.gantt .bar-progress.gantt-bar-completed {
+    fill: var(--color-completed) !important; /* Green */
+}
+
+.gantt .bar-progress.gantt-bar-in_progress {
+    fill: var(--accent-color) !important; /* Blue */
+}
+
+.gantt .bar-progress.gantt-bar-blocked {
+    fill: var(--color-blocked) !important; /* Red */
+}
+
+.gantt .bar-progress.gantt-bar-overdue {
+    fill: var(--color-overdue) !important; /* Dark Red */
+}
+
+.gantt .bar-progress.gantt-bar-open {
+    fill: var(--color-open) !important; /* Cyan */
+}
+
+.gantt .bar-progress.gantt-bar-not_started {
+    fill: var(--color-not-started) !important; /* Gray */
+}
+
+/* Custom popup styling */
+.gantt-container .popup-wrapper {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    padding: 0; /* Remove default padding */
+}
+
+.gantt-popup-content h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.gantt-popup-content p {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}```
+
+#### Step 4: Update Navigation in Other Pages
+
+To ensure you can access the new page, you must add the link to the navigation bar on the other pages.
+
+1.  Open the following files one by one: `dashboard.html`, `prep_tasks.html`, and `blockers.html`.
+2.  In each file, find the `<ul class="navbar-nav ms-auto">` element.
+3.  Add the new Gantt link `<li>` element as shown below, ensuring the `active` class is on the correct item for that page.
+
+**Example for `dashboard.html`:**
+```html
+<ul class="navbar-nav ms-auto">
+    <li class="nav-item"><a class="nav-link active" href="dashboard.html"><i class="bi bi-house-door"></i> Home</a></li>
+    <li class="nav-item"><a class="nav-link" href="prep_tasks.html"><i class="bi bi-list-check"></i> Prep Tasks</a></li>
+    <li class="nav-item"><a class="nav-link" href="blockers.html"><i class="bi bi-cone-striped"></i> Blockers</a></li>
+    <!-- ADD THIS LINE -->
+    <li class="nav-item"><a class="nav-link" href="gantt.html"><i class="bi bi-bar-chart-line"></i> Gantt View</a></li>
+    <li class="nav-item"><a class="nav-link" href="admin.html"><i class="bi bi-person-badge"></i> Admin</a></li>
+    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+</ul>
