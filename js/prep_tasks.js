@@ -107,15 +107,18 @@
                 const status = (item.Status || '').toLowerCase();
                 let statusClass = { 'completed': 'text-success', 'in_progress': 'text-primary', 'overdue': 'text-warning', 'blocked': 'text-danger' }[status] || 'text-secondary';
                 
+                // ========================================================
+                // UPDATED: Logic to determine progress bar color
+                // ========================================================
                 let progressColorClass = '';
                 if (progress <= 30) {
-                    progressColorClass = 'bg-warning'; // Orange for 0-30%
+                    progressColorClass = 'bg-progress-orange'; // Custom Orange for 0-30%
                 } else if (progress <= 60) {
-                    progressColorClass = 'bg-info'; // Blueish/Yellow for 31-60%
+                    progressColorClass = 'bg-warning';      // Bootstrap Yellow for 31-60%
                 } else if (progress < 100) {
-                    progressColorClass = 'bg-success-light'; // Light Green for 61-99%
+                    progressColorClass = 'bg-success-light';  // Custom Light Green for 61-99%
                 } else {
-                    progressColorClass = 'bg-success'; // Dark Green for 100%
+                    progressColorClass = 'bg-success';        // Bootstrap Dark Green for 100%
                 }
                 
                 const row = document.createElement('tr');
