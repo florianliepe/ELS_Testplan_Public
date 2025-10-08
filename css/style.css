@@ -332,21 +332,26 @@ tbody tr:hover {
 .priority-medium { background-color: var(--color-medium); color: #333; }
 .priority-low { background-color: var(--color-low); }
 
+
+/* ================================================= */
+/* FIX FOR PROGRESS BAR PROPORTION AND TEXT          */
+/* ================================================= */
 .progress-bar {
-    width: 100px;
-    height: 8px;
-    background-color: var(--border-color);
-    border-radius: 4px;
-    overflow: hidden;
-    display: inline-block;
-    margin-right: 8px;
+    display: flex;
+    align-items: center; /* Vertically center the text */
+    justify-content: center; /* Horizontally center the text */
+    font-size: 0.8em; /* Make font slightly smaller to prevent overflow */
+    font-weight: 600;
+    color: white; /* Default text color */
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4); /* Add shadow for readability */
 }
 
-.progress-bar-fill {
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 4px;
+/* On lighter backgrounds, use dark text and remove the shadow */
+.progress-bar.bg-warning, .progress-bar.bg-success-light {
+    color: #212529 !important;
+    text-shadow: none;
 }
+
 
 /* 10. Responsive Design */
 @media (max-width: 768px) {
@@ -391,8 +396,12 @@ tbody tr:hover {
 }
 
 /* ================================================= */
-/* NEW CLASS FOR LIGHT GREEN PROGRESS BAR            */
+/* CUSTOM PROGRESS BAR COLORS                        */
 /* ================================================= */
 .bg-success-light {
     background-color: #63c78a !important;
+}
+
+.bg-progress-orange {
+    background-color: #fd7e14 !important;
 }
