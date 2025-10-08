@@ -1,14 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
-    console.log("Gantt Chart script initialized.");
-
     const storageKey = 'Test Plan';
     const ganttChartContainer = document.getElementById('gantt-chart');
 
     if (!ganttChartContainer) {
-        console.error("Critical Error: The Gantt chart container '#gantt-chart' was not found in the DOM.");
+        console.error("Gantt chart container '#gantt-chart' not found.");
         return;
+    }
+
+    // ===================================================================
+    // NEW: Smart function to get a value from an object using multiple possible key names.
+    // This makes the script robust against variations in Excel column headers.
+    // ===================================================================
+    function getValueByKey(obj, keys) {
+        for (const key of keys) {
+            if (obj[key] !== undefined) {
+                return obj[key];
+            }
+        }
+        return undefined; // Return undefined if no key is found
     }
 
     function parseAndFormatDate(dateInput) {
@@ -36,22 +47,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let testPlanData = [];
     try {
         testPlanData = JSON.parse(storedData);
-        // --- DIAGNOSTIC LOG 1 ---
-        console.log(`Successfully loaded ${testPlanData.length} raw items from localStorage.`, testPlanData);
     } catch (e) {
-        console.error("Failed to parse Test Plan data from localStorage.", e);
         ganttChartContainer.innerHTML = `<div class="alert alert-danger">Error parsing data. Please re-upload your file.</div>`;
         return;
     }
 
     const tasks = testPlanData
         .map((item, index) => {
-            const startDate = parseAndFormatDate(item['Start Date']);
-            const endDate = parseAndFormatDate(item['Due Date']);
+            // ===================================================================
+            // UPDATED: Use the smart getValueByKey function to find the dates.
+            // ===================================================================
+            const startDateRaw = getValueByKey(item, ['Start Date', 'Start', 'StartDate', 'start_date']);
+            const dueDateRaw = getValueByKey(item, ['Due Date', 'Due', 'EndDate', 'end_date', 'Due date']);
+
+            const startDate = parseAndFormatDate(startDateRaw);
+            const endDate = parseAndFormatDate(dueDateRaw);
             
             if (!startDate || !endDate) {
-                // --- DIAGNOSTIC LOG 2 ---
-                console.warn(`Skipping item #${index} due to invalid or missing dates.`, item);
                 return null;
             }
             
@@ -69,15 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
         .filter(task => task !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    // --- DIAGNOSTIC LOG 3 ---
-    console.log(`Processing complete. Found ${tasks.length} valid tasks to render.`, tasks);
-
     if (tasks.length === 0) {
-        // --- IMPROVED USER MESSAGE ---
         ganttChartContainer.innerHTML = `<div class="alert alert-info p-4">
             <h4>No Tasks to Display</h4>
-            <p>The Gantt chart could not be rendered because no tasks with a valid <strong>Start Date</strong> and <strong>Due Date</strong> were found in the uploaded data.</p>
-            <p class="mb-0">Please check your Excel file to ensure these columns exist and contain valid dates for each task you wish to display.</p>
+            <p>The Gantt chart could not be rendered because no tasks with valid date columns were found.</p>
+            <p class="mb-0">Please ensure your Excel file has columns named similar to <strong>'Start Date'</strong> and <strong>'Due Date'</strong>.</p>
         </div>`;
         return;
     }
@@ -92,9 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             view_mode: 'Week'
         });
-        console.log("Gantt chart successfully initialized and rendered.");
     } catch (e) {
-        console.error("An error occurred during Gantt chart initialization:", e);
-        ganttChartContainer.innerHTML = `<div class="alert alert-danger">A critical error occurred while trying to draw the chart. Please check the console for details.</div>`;
+        ganttChartContainer.innerHTML = `<div class="alert alert-danger">A critical error occurred while trying to draw the chart.</div>`;
     }
 });
