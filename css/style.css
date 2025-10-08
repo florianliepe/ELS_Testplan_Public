@@ -481,3 +481,66 @@ To ensure you can access the new page, you must add the link to the navigation b
     <li class="nav-item"><a class="nav-link" href="admin.html"><i class="bi bi-person-badge"></i> Admin</a></li>
     <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
 </ul>
+/* ================================================= */
+/* 11. GANTT CHART STYLES                            */
+/* ================================================= */
+
+/* FIX: Ensure the SVG container for the Gantt chart has a minimum height */
+#gantt-chart {
+    display: block;
+    min-height: 450px; /* Give the chart area a default size */
+}
+
+/* Default bar styles */
+.gantt .bar-wrapper {
+    transition: filter 0.2s;
+    cursor: pointer;
+}
+
+.gantt .bar-wrapper:hover {
+    filter: brightness(1.2);
+}
+
+/* Status-based coloring for Gantt bars */
+.gantt .bar-progress.gantt-bar-completed {
+    fill: var(--color-completed) !important; /* Green */
+}
+
+.gantt .bar-progress.gantt-bar-in_progress {
+    fill: var(--accent-color) !important; /* Blue */
+}
+
+.gantt .bar-progress.gantt-bar-blocked {
+    fill: var(--color-blocked) !important; /* Red */
+}
+
+.gantt .bar-progress.gantt-bar-overdue {
+    fill: var(--color-overdue) !important; /* Dark Red */
+}
+
+.gantt .bar-progress.gantt-bar-open {
+    fill: var(--color-open) !important; /* Cyan */
+}
+
+.gantt .bar-progress.gantt-bar-not_started {
+    fill: var(--color-not-started) !important; /* Gray */
+}
+
+/* Custom popup styling */
+.gantt-container .popup-wrapper {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    padding: 0; /* Remove default padding */
+}
+
+.gantt-popup-content h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.gantt-popup-content p {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
