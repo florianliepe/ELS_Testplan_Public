@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
-    console.log("Gantt Chart script initialized. Version 2.");
-
     const storageKey = 'Test Plan';
     const ganttChartContainer = document.getElementById('gantt-chart');
 
@@ -15,19 +13,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return undefined;
     }
 
-    function parseAndFormatDate(dateInput) {
-        if (dateInput === null || dateInput === undefined) return null;
-        let date;
-        if (typeof dateInput === 'number' && dateInput > 1) {
-            const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
-            date = new Date(utcMilliseconds);
-        } else {
-            date = new Date(dateInput);
-        }
-        if (isNaN(date.getTime())) return null;
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+    // ===================================================================
+    // NEW: Specialized function to parse "DD.MM.YYYY" string dates.
+    // ===================================================================
+    function parseDateString(dateString) {
+        if (!dateString || typeof dateString !== 'string') return null;
+
+        // Split the string by the dot separator
+        const parts = dateString.split('.');
+        if (parts.length !== 3) return null;
+
+        const day = parts[0];
+        const month = parts[1];
+        const year = parts[2];
+
+        // Reassemble into ISO format (YYYY-MM-DD) required by Gantt library
         return `${year}-${month}-${day}`;
     }
 
@@ -40,12 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let testPlanData = [];
     try {
         testPlanData = JSON.parse(storedData);
-        if (!Array.isArray(testPlanData) || testPlanData.length === 0) {
-            console.error("Data loaded from localStorage is not a valid array or is empty.", testPlanData);
-            ganttChartContainer.innerHTML = `<div class="alert alert-warning">The uploaded data is empty or invalid. Please upload a valid Excel file.</div>`;
-            return;
-        }
-        console.log(`Successfully loaded ${testPlanData.length} raw items. First item:`, testPlanData[0]);
     } catch (e) {
         ganttChartContainer.innerHTML = `<div class="alert alert-danger">Error parsing data. Please re-upload your file.</div>`;
         return;
@@ -53,49 +47,79 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tasks = testPlanData
         .map((item, index) => {
-            // --- VERBOSE LOGGING ---
-            const startDateRaw = getValueByKey(item, ['Start Date', 'Start', 'StartDate', 'start_date', 'Startdatum']);
-            const dueDateRaw = getValueByKey(item, ['Due Date', 'Due', 'EndDate', 'end_date', 'Due date', 'Enddatum']);
-            const testName = getValueByKey(item, ['Test', 'Task', 'Activity', 'Testfall']);
+            const startDateRaw = getValueByKey(item, ['Start Date', 'Start', 'StartDate']);
+            const dueDateRaw = getValueByKey(item, ['Due Date', 'Due', 'EndDate']);
             
-            console.log(`Item #${index}: StartDateRaw=${startDateRaw}, DueDateRaw=${dueDateRaw}, TestName=${testName}`);
-
-            const startDate = parseAndFormatDate(startDateRaw);
-            const endDate = parseAndFormatDate(dueDateRaw);
+            // UPDATED: Use the new parsing function
+            const startDate = parseDateString(startDateRaw);
+            const endDate = parseDateString(dueDateRaw);
             
-            if (!startDate || !endDate || !testName) {
-                console.warn(`Item #${index} is being skipped. One or more required fields are missing or invalid.`);
+            if (!startDate || !endDate) {
+                // Silently skip items with invalid dates
                 return null;
             }
+            
+            const status = (item.Status || 'not_started').toLowerCase().replace(/ /g, '_');
+            const testName = getValueByKey(item, ['Test', 'Task', 'Activity']) || `Task ${index}`;
             
             return {
                 id: `task_${index}`,
                 name: `[${item.Responsible || 'N/A'}] - ${testName}`,
-                start: startDate,
-                end: endDate,
+                start: startDate, // Will be 'YYYY-MM-DD'
+                end: endDate,     // Will be 'YYYY-MM-DD'
                 progress: parseInt(getValueByKey(item, ['Progress', 'Fortschritt']), 10) || 0,
-                custom_class: `gantt-bar-${(item.Status || 'not_started').toLowerCase().replace(/ /g, '_')}`
+                custom_class: `gantt-bar-${status}`
             };
         })
         .filter(task => task !== null);
-    
-    console.log(`Processing complete. Found ${tasks.length} valid tasks to render.`, tasks);
 
     if (tasks.length === 0) {
-        ganttChartContainer.innerHTML = `<div class="alert alert-info p-4"><h4>No Tasks to Display</h4><p>The Gantt chart could not be rendered because no tasks with valid date and name columns were found.</p><p class="mb-0">Please ensure your Excel file has columns named similar to <strong>'Test'</strong>, <strong>'Start Date'</strong>, and <strong>'Due Date'</strong>.</p></div>`;
+        ganttChartContainer.innerHTML = `<div class="alert alert-info p-4">
+            <h4>No Tasks to Display</h4>
+            <p>The Gantt chart could not be rendered because no tasks with valid dates in the format <strong>DD.MM.YYYY</strong> were found.</p>
+        </div>`;
         return;
     }
 
-    // Sort tasks AFTER filtering to avoid errors
+    // Sort by Responsible person (extracted from name)
     tasks.sort((a, b) => a.name.localeCompare(b.name));
 
     try {
         new Gantt("#gantt-chart", tasks, {
-            custom_popup_html: function(task) { /* ... popup logic ... */ },
-            view_mode: 'Week'
+            custom_popup_html: function(task) {
+                // Extract info back from the generated name string
+                const parts = task.name.match(/^\[(.*?)\] - (.*)$/);
+                const responsible = parts ? parts[1] : 'N/A';
+                const testName = parts ? parts[2] : task.name;
+                // Get status from class name
+                const status = task.custom_class.replace('gantt-bar-', '').replace('_', ' ');
+
+                return `
+                <div class="gantt-popup-content p-2" style="width: 250px;">
+                    <h6 class="mb-2 border-bottom pb-1">${testName}</h6>
+                    <div class="small">
+                        <div><strong>Responsible:</strong> ${responsible}</div>
+                        <div><strong>Status:</strong> <span class="text-capitalize">${status}</span></div>
+                        <div><strong>Progress:</strong> ${task.progress}%</div>
+                        <div class="mt-1 text-muted">${task.start} to ${task.end}</div>
+                    </div>
+                </div>
+            `;
+            },
+            view_mode: 'Day', // Start with Day view for better visibility of short tasks
+            language: 'en'
         });
-        console.log("Gantt chart successfully initialized.");
+        
+        // Final visual adjustment: center the view on the tasks
+        setTimeout(() => {
+            const scrollContainer = document.querySelector('.gantt-container');
+            if (scrollContainer) {
+                scrollContainer.scrollLeft = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
+            }
+        }, 500);
+
     } catch (e) {
-        console.error("Error during Gantt chart initialization:", e);
+        console.error(e);
+        ganttChartContainer.innerHTML = `<div class="alert alert-danger">A critical error occurred while drawing the chart.</div>`;
     }
 });
