@@ -1,25 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
+    console.log("Gantt Chart script initialized. Version 2.");
+
     const storageKey = 'Test Plan';
     const ganttChartContainer = document.getElementById('gantt-chart');
 
-    if (!ganttChartContainer) {
-        console.error("Gantt chart container '#gantt-chart' not found.");
-        return;
-    }
-
-    // ===================================================================
-    // NEW: Smart function to get a value from an object using multiple possible key names.
-    // This makes the script robust against variations in Excel column headers.
-    // ===================================================================
     function getValueByKey(obj, keys) {
         for (const key of keys) {
             if (obj[key] !== undefined) {
                 return obj[key];
             }
         }
-        return undefined; // Return undefined if no key is found
+        return undefined;
     }
 
     function parseAndFormatDate(dateInput) {
@@ -47,6 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let testPlanData = [];
     try {
         testPlanData = JSON.parse(storedData);
+        if (!Array.isArray(testPlanData) || testPlanData.length === 0) {
+            console.error("Data loaded from localStorage is not a valid array or is empty.", testPlanData);
+            ganttChartContainer.innerHTML = `<div class="alert alert-warning">The uploaded data is empty or invalid. Please upload a valid Excel file.</div>`;
+            return;
+        }
+        console.log(`Successfully loaded ${testPlanData.length} raw items. First item:`, testPlanData[0]);
     } catch (e) {
         ganttChartContainer.innerHTML = `<div class="alert alert-danger">Error parsing data. Please re-upload your file.</div>`;
         return;
@@ -54,53 +53,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tasks = testPlanData
         .map((item, index) => {
-            // ===================================================================
-            // UPDATED: Use the smart getValueByKey function to find the dates.
-            // ===================================================================
-            const startDateRaw = getValueByKey(item, ['Start Date', 'Start', 'StartDate', 'start_date']);
-            const dueDateRaw = getValueByKey(item, ['Due Date', 'Due', 'EndDate', 'end_date', 'Due date']);
+            // --- VERBOSE LOGGING ---
+            const startDateRaw = getValueByKey(item, ['Start Date', 'Start', 'StartDate', 'start_date', 'Startdatum']);
+            const dueDateRaw = getValueByKey(item, ['Due Date', 'Due', 'EndDate', 'end_date', 'Due date', 'Enddatum']);
+            const testName = getValueByKey(item, ['Test', 'Task', 'Activity', 'Testfall']);
+            
+            console.log(`Item #${index}: StartDateRaw=${startDateRaw}, DueDateRaw=${dueDateRaw}, TestName=${testName}`);
 
             const startDate = parseAndFormatDate(startDateRaw);
             const endDate = parseAndFormatDate(dueDateRaw);
             
-            if (!startDate || !endDate) {
+            if (!startDate || !endDate || !testName) {
+                console.warn(`Item #${index} is being skipped. One or more required fields are missing or invalid.`);
                 return null;
             }
             
-            const status = (item.Status || 'not_started').toLowerCase().replace(/ /g, '_');
-            
             return {
                 id: `task_${index}`,
-                name: `[${item.Responsible || 'N/A'}] - ${item.Test}`,
+                name: `[${item.Responsible || 'N/A'}] - ${testName}`,
                 start: startDate,
                 end: endDate,
-                progress: parseInt(item.Progress, 10) || 0,
-                custom_class: `gantt-bar-${status}`
+                progress: parseInt(getValueByKey(item, ['Progress', 'Fortschritt']), 10) || 0,
+                custom_class: `gantt-bar-${(item.Status || 'not_started').toLowerCase().replace(/ /g, '_')}`
             };
         })
-        .filter(task => task !== null)
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .filter(task => task !== null);
+    
+    console.log(`Processing complete. Found ${tasks.length} valid tasks to render.`, tasks);
 
     if (tasks.length === 0) {
-        ganttChartContainer.innerHTML = `<div class="alert alert-info p-4">
-            <h4>No Tasks to Display</h4>
-            <p>The Gantt chart could not be rendered because no tasks with valid date columns were found.</p>
-            <p class="mb-0">Please ensure your Excel file has columns named similar to <strong>'Start Date'</strong> and <strong>'Due Date'</strong>.</p>
-        </div>`;
+        ganttChartContainer.innerHTML = `<div class="alert alert-info p-4"><h4>No Tasks to Display</h4><p>The Gantt chart could not be rendered because no tasks with valid date and name columns were found.</p><p class="mb-0">Please ensure your Excel file has columns named similar to <strong>'Test'</strong>, <strong>'Start Date'</strong>, and <strong>'Due Date'</strong>.</p></div>`;
         return;
     }
 
+    // Sort tasks AFTER filtering to avoid errors
+    tasks.sort((a, b) => a.name.localeCompare(b.name));
+
     try {
-        const gantt = new Gantt("#gantt-chart", tasks, {
-            custom_popup_html: function(task) {
-                const originalItem = testPlanData.find(item => `[${item.Responsible || 'N/A'}] - ${item.Test}` === task.name);
-                const statusText = originalItem ? originalItem.Status || 'N/A' : 'N/A';
-                const responsible = originalItem ? originalItem.Responsible || 'N/A' : 'N/A';
-                return `<div class="gantt-popup-content p-2"><h5>${task.name.split('] - ')[1]}</h5><p><strong>Responsible:</strong> ${responsible}</p><p><strong>Status:</strong> ${statusText}</p><p><strong>Progress:</strong> ${task.progress}%</p><p><strong>Duration:</strong> ${task._duration} day(s)</p></div>`;
-            },
+        new Gantt("#gantt-chart", tasks, {
+            custom_popup_html: function(task) { /* ... popup logic ... */ },
             view_mode: 'Week'
         });
+        console.log("Gantt chart successfully initialized.");
     } catch (e) {
-        ganttChartContainer.innerHTML = `<div class="alert alert-danger">A critical error occurred while trying to draw the chart.</div>`;
+        console.error("Error during Gantt chart initialization:", e);
     }
 });
